@@ -140,8 +140,15 @@
     cursor:pointer;
   }
   .equip-item.checked{border-color:var(--accent);background:#fdf1ec;}
-  .equip-icon{flex:0 0 52px;width:52px;height:52px;}
-  .equip-icon svg{width:100%;height:100%;}
+  .equip-icon{
+    flex:0 0 56px;width:56px;height:56px;
+    border-radius:50%;
+    background:#fbe4da;
+    color:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .equip-icon svg{width:34px;height:34px;}
+  .equip-item.checked .equip-icon{background:var(--accent);color:#fff;}
   .equip-body{flex:1;min-width:0;}
   .equip-he{font-size:18px;font-weight:700;}
   .equip-en{font-size:13px;color:var(--muted);}
@@ -275,67 +282,67 @@ function saveState(){
    EQUIPMENT LIBRARY
 --------------------------------------------------------------------- */
 function icon(paths){
-  return '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';
+  return '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';
 }
 
 var EQUIPMENT = [
   {id:'dumbbells', he:'משקולות יד', en:'Dumbbells',
     desc:'משקולות מתכת קטנות שאוחזים ביד אחת, בדרך כלל בערימה לפי משקל.',
-    icon: icon('<circle cx="14" cy="32" r="9"/><circle cx="50" cy="32" r="9"/><line x1="23" y1="32" x2="41" y2="32"/>')},
+    icon: icon('<circle cx="9" cy="20" r="6" fill="currentColor" opacity="0.15"/><circle cx="9" cy="20" r="6"/><circle cx="31" cy="20" r="6" fill="currentColor" opacity="0.15"/><circle cx="31" cy="20" r="6"/><line x1="15" y1="20" x2="25" y2="20" stroke-width="3.4"/>')},
   {id:'bench_flat', he:'ספסל שטוח', en:'Flat bench',
     desc:'ספסל מרופד וישר, בלי אפשרות להטות את הגב שלו.',
-    icon: icon('<rect x="8" y="26" width="48" height="10" rx="2"/><line x1="14" y1="36" x2="14" y2="50"/><line x1="50" y1="36" x2="50" y2="50"/>')},
+    icon: icon('<rect x="5" y="16" width="30" height="7" rx="2.5" fill="currentColor" opacity="0.15"/><rect x="5" y="16" width="30" height="7" rx="2.5"/><line x1="10" y1="23" x2="10" y2="33"/><line x1="30" y1="23" x2="30" y2="33"/>')},
   {id:'bench_adj', he:'ספסל מתכוונן', en:'Adjustable bench',
     desc:'ספסל מרופד שאפשר להרים ולהטות את משענת הגב שלו לזוויות שונות.',
-    icon: icon('<rect x="8" y="30" width="30" height="10" rx="2"/><line x1="36" y1="34" x2="52" y2="12"/><line x1="14" y1="40" x2="14" y2="52"/><line x1="34" y1="40" x2="34" y2="52"/>')},
+    icon: icon('<rect x="5" y="20" width="18" height="7" rx="2.5" fill="currentColor" opacity="0.15"/><rect x="5" y="20" width="18" height="7" rx="2.5"/><rect x="21.5" y="6.5" width="18" height="7" rx="2.5" transform="rotate(58 21.5 6.5)" fill="currentColor" opacity="0.15"/><rect x="21.5" y="6.5" width="18" height="7" rx="2.5" transform="rotate(58 21.5 6.5)"/><line x1="10" y1="27" x2="10" y2="33"/><line x1="20" y1="27" x2="20" y2="33"/>')},
   {id:'cable', he:'מתקן פולי / כבלים', en:'Cable machine',
     desc:'מתקן גבוה עם כבל מתכת שיוצא מגלגלת ומתחבר לידית שמושכים.',
-    icon: icon('<line x1="12" y1="8" x2="12" y2="56"/><circle cx="12" cy="14" r="5"/><line x1="16" y1="18" x2="44" y2="40"/><line x1="40" y1="40" x2="48" y2="40"/>')},
+    icon: icon('<line x1="9" y1="4" x2="9" y2="36"/><circle cx="9" cy="9" r="3.2" fill="currentColor" opacity="0.2"/><circle cx="9" cy="9" r="3.2"/><line x1="11.5" y1="11.5" x2="27" y2="27" stroke-dasharray="1 3.2"/><line x1="23" y1="27" x2="31" y2="27"/>')},
   {id:'latpulldown', he:'מתקן משיכה עליונה', en:'Lat pulldown',
     desc:'מתקן עם מוט רחב הפוך למעלה, מושכים אותו כלפי מטה בישיבה.',
-    icon: icon('<line x1="32" y1="6" x2="32" y2="18"/><line x1="14" y1="18" x2="50" y2="18"/><line x1="32" y1="18" x2="32" y2="38"/><rect x="24" y="38" width="16" height="12" rx="2"/><line x1="26" y1="50" x2="26" y2="58"/><line x1="38" y1="50" x2="38" y2="58"/>')},
+    icon: icon('<line x1="20" y1="4" x2="20" y2="11"/><line x1="8" y1="11" x2="32" y2="11" stroke-width="3"/><line x1="20" y1="11" x2="20" y2="23" stroke-dasharray="1 3.2"/><rect x="13" y="23" width="14" height="8" rx="2.5" fill="currentColor" opacity="0.15"/><rect x="13" y="23" width="14" height="8" rx="2.5"/><line x1="16" y1="31" x2="16" y2="36"/><line x1="24" y1="31" x2="24" y2="36"/>')},
   {id:'seatedrow', he:'מתקן חתירה בישיבה', en:'Seated row',
     desc:'מכונה בישיבה עם משטח לרגליים וידית שמושכים לכיוון הבטן.',
-    icon: icon('<rect x="10" y="34" width="16" height="10" rx="2"/><line x1="26" y1="38" x2="48" y2="38"/><line x1="18" y1="44" x2="18" y2="54"/><line x1="44" y1="34" x2="44" y2="20"/>')},
+    icon: icon('<rect x="6" y="22" width="10" height="7" rx="2.5" fill="currentColor" opacity="0.15"/><rect x="6" y="22" width="10" height="7" rx="2.5"/><line x1="16" y1="25.5" x2="29" y2="25.5" stroke-dasharray="1 3.2"/><circle cx="32" cy="25.5" r="2.6" fill="currentColor"/><line x1="10" y1="29" x2="10" y2="35"/>')},
   {id:'chestpress', he:'מתקן לחיצת חזה', en:'Chest press machine',
     desc:'מכונה בישיבה עם שתי ידיות שדוחפים קדימה מול החזה.',
-    icon: icon('<rect x="8" y="14" width="10" height="36" rx="2"/><line x1="18" y1="24" x2="42" y2="24"/><line x1="18" y1="40" x2="42" y2="40"/>')},
+    icon: icon('<rect x="5" y="8" width="7" height="24" rx="2.5" fill="currentColor" opacity="0.15"/><rect x="5" y="8" width="7" height="24" rx="2.5"/><line x1="12" y1="15" x2="27" y2="15"/><circle cx="29" cy="15" r="2" fill="currentColor"/><line x1="12" y1="25" x2="27" y2="25"/><circle cx="29" cy="25" r="2" fill="currentColor"/>')},
   {id:'shoulderpress', he:'מתקן לחיצת כתפיים', en:'Shoulder press machine',
     desc:'מכונה בישיבה עם שתי ידיות שדוחפים כלפי מעלה, מעל לראש.',
-    icon: icon('<rect x="14" y="30" width="10" height="24" rx="2"/><line x1="20" y1="30" x2="20" y2="12"/><line x1="44" y1="30" x2="44" y2="12"/><line x1="14" y1="18" x2="26" y2="18"/><line x1="38" y1="18" x2="50" y2="18"/>')},
+    icon: icon('<rect x="9" y="20" width="7" height="16" rx="2.5" fill="currentColor" opacity="0.15"/><rect x="9" y="20" width="7" height="16" rx="2.5"/><line x1="13" y1="20" x2="13" y2="7"/><circle cx="13" cy="7" r="2" fill="currentColor"/><line x1="29" y1="20" x2="29" y2="7"/><circle cx="29" cy="7" r="2" fill="currentColor"/>')},
   {id:'legpress', he:'מכונת לחיצת רגליים', en:'Leg press',
     desc:'מכונה נטויה עם משטח גדול שדוחפים אותו קדימה עם שתי הרגליים בישיבה.',
-    icon: icon('<rect x="8" y="38" width="26" height="8" rx="2" transform="rotate(-20 8 38)"/><rect x="30" y="14" width="10" height="30" rx="2"/><line x1="10" y1="52" x2="46" y2="52"/>')},
+    icon: icon('<rect x="3" y="21" width="19" height="7.5" rx="2.5" transform="rotate(-20 3 21)" fill="currentColor" opacity="0.15"/><rect x="3" y="21" width="19" height="7.5" rx="2.5" transform="rotate(-20 3 21)"/><rect x="24" y="6" width="8" height="22" rx="2.5" fill="currentColor" opacity="0.15"/><rect x="24" y="6" width="8" height="22" rx="2.5"/><line x1="6" y1="34" x2="34" y2="34"/>')},
   {id:'legcurl', he:'מכונת כפיפת רגליים', en:'Leg curl',
     desc:'מכונה בשכיבה או ישיבה עם כרית מאחורי הקרסול, כופפים בה את הברך.',
-    icon: icon('<rect x="8" y="30" width="34" height="10" rx="2"/><line x1="42" y1="35" x2="52" y2="20"/><circle cx="52" cy="16" r="4"/>')},
+    icon: icon('<rect x="4" y="17" width="23" height="7" rx="2.5" fill="currentColor" opacity="0.15"/><rect x="4" y="17" width="23" height="7" rx="2.5"/><line x1="27" y1="21" x2="34" y2="11"/><circle cx="35.5" cy="8.5" r="3" fill="currentColor" opacity="0.2"/><circle cx="35.5" cy="8.5" r="3"/>')},
   {id:'legext', he:'מכונת פשיטת רגליים', en:'Leg extension',
     desc:'מכונה בישיבה עם כרית מעל הקרסול, מיישרים איתה את הברך קדימה.',
-    icon: icon('<rect x="16" y="14" width="10" height="26" rx="2"/><line x1="21" y1="40" x2="21" y2="52"/><line x1="26" y1="46" x2="48" y2="30"/><circle cx="50" cy="27" r="4"/>')},
+    icon: icon('<rect x="9" y="6" width="7" height="18" rx="2.5" fill="currentColor" opacity="0.15"/><rect x="9" y="6" width="7" height="18" rx="2.5"/><line x1="12.5" y1="24" x2="12.5" y2="34"/><line x1="16" y1="27" x2="30" y2="16"/><circle cx="32" cy="14" r="3" fill="currentColor" opacity="0.2"/><circle cx="32" cy="14" r="3"/>')},
   {id:'smith', he:'מתקן סמית\'', en:'Smith machine',
     desc:'מוט מתכת ארוך שנע במסילות אנכיות קבועות משני צדדים.',
-    icon: icon('<line x1="14" y1="6" x2="14" y2="58"/><line x1="50" y1="6" x2="50" y2="58"/><line x1="10" y1="26" x2="54" y2="26"/>')},
+    icon: icon('<line x1="9" y1="3" x2="9" y2="37"/><line x1="31" y1="3" x2="31" y2="37"/><line x1="5" y1="15" x2="35" y2="15" stroke-width="3.4"/><circle cx="9" cy="15" r="1.8" fill="currentColor"/><circle cx="31" cy="15" r="1.8" fill="currentColor"/>')},
   {id:'kettlebell', he:'קטלבל', en:'Kettlebell',
     desc:'גוש מתכת עגול עם ידית קשת עבה למעלה, כמו קומקום.',
-    icon: icon('<path d="M22 22 a10 10 0 0 1 20 0"/><path d="M18 26 a14 16 0 1 0 28 0 z"/>')},
+    icon: icon('<path d="M14 15 a6 6 0 0 1 12 0"/><path d="M8 19 a12 13 0 1 0 24 0 z" fill="currentColor" opacity="0.15"/><path d="M8 19 a12 13 0 1 0 24 0 z"/>')},
   {id:'band', he:'גומיית התנגדות', en:'Resistance band',
     desc:'רצועת גומי צבעונית וארוכה בלי חלקים קשים, נמתחת בין הידיים.',
-    icon: icon('<path d="M8 40 Q20 12 32 40 T56 24"/>')},
+    icon: icon('<path d="M4 26 Q12 8 20 22 T36 14" stroke-width="3"/>')},
   {id:'mat', he:'מזרן', en:'Mat',
     desc:'מזרן דק ורך לתרגילי רצפה.',
-    icon: icon('<rect x="8" y="24" width="48" height="16" rx="4"/>')},
+    icon: icon('<rect x="4" y="14" width="32" height="12" rx="6" fill="currentColor" opacity="0.15"/><rect x="4" y="14" width="32" height="12" rx="6"/><line x1="13" y1="14" x2="13" y2="26"/>')},
   {id:'treadmill', he:'הליכון', en:'Treadmill',
     desc:'מכונה עם רצועה שחורה נעה, שמהלכים או רצים עליה במקום.',
-    icon: icon('<rect x="8" y="38" width="40" height="10" rx="4"/><line x1="40" y1="38" x2="52" y2="14"/><line x1="52" y1="14" x2="58" y2="14"/>')},
+    icon: icon('<rect x="4" y="24" width="25" height="7" rx="3.5" fill="currentColor" opacity="0.15"/><rect x="4" y="24" width="25" height="7" rx="3.5"/><line x1="24" y1="24" x2="33" y2="8"/><line x1="33" y1="8" x2="37" y2="8"/>')},
   {id:'bike', he:'אופני כושר', en:'Stationary bike',
     desc:'אופניים עם מושב שלא זזים ממקום, לדוושות סגורות.',
-    icon: icon('<circle cx="18" cy="42" r="12"/><circle cx="46" cy="42" r="12"/><line x1="18" y1="42" x2="34" y2="18"/><line x1="34" y1="18" x2="46" y2="42"/><line x1="34" y1="18" x2="34" y2="10"/>')},
+    icon: icon('<circle cx="10" cy="27" r="7.5" fill="currentColor" opacity="0.12"/><circle cx="10" cy="27" r="7.5"/><circle cx="29" cy="27" r="7.5" fill="currentColor" opacity="0.12"/><circle cx="29" cy="27" r="7.5"/><line x1="10" y1="27" x2="20" y2="12"/><line x1="20" y1="12" x2="29" y2="27"/><line x1="20" y1="12" x2="20" y2="6"/><line x1="16" y1="6" x2="24" y2="6"/>')},
   {id:'pullupbar', he:'מתח', en:'Pull-up bar',
     desc:'מוט קבוע וגבוה שתולים ממנו עם שתי הידיים.',
-    icon: icon('<line x1="10" y1="14" x2="54" y2="14"/><line x1="14" y1="8" x2="14" y2="14"/><line x1="50" y1="8" x2="50" y2="14"/><line x1="24" y1="14" x2="24" y2="24"/><line x1="40" y1="14" x2="40" y2="24"/>')},
+    icon: icon('<line x1="5" y1="9" x2="35" y2="9" stroke-width="3.4"/><line x1="9" y1="4" x2="9" y2="9"/><line x1="31" y1="4" x2="31" y2="9"/><line x1="15" y1="9" x2="14" y2="18"/><line x1="25" y1="9" x2="26" y2="18"/>')},
   {id:'hipthrust', he:'מכונת הרמת אגן', en:'Hip thrust machine',
     desc:'מכונה עם כרית שיושבת על הבטן התחתונה, דוחפים איתה את האגן למעלה בישיבה נשענת.',
-    icon: icon('<rect x="8" y="30" width="14" height="10" rx="2"/><line x1="22" y1="35" x2="44" y2="35"/><circle cx="48" cy="35" r="6"/>')}
+    icon: icon('<rect x="4" y="17" width="11" height="7" rx="2.5" fill="currentColor" opacity="0.15"/><rect x="4" y="17" width="11" height="7" rx="2.5"/><line x1="15" y1="20.5" x2="27" y2="20.5" stroke-dasharray="1 3.2"/><circle cx="30" cy="20.5" r="4.5" fill="currentColor" opacity="0.15"/><circle cx="30" cy="20.5" r="4.5"/>')}
 ];
 
 /* ---------------------------------------------------------------------
@@ -706,7 +713,7 @@ function availableExercises(){
   });
 }
 
-function pickForSlot(slot, pool, used){
+function pickForSlot(slot, pool, used, rotation){
   var candidates;
   if(slot === 'squat_lunge') candidates = pool.filter(function(e){ return e.pattern==='squat' || e.pattern==='lunge'; });
   else if(slot === 'vertical') candidates = pool.filter(function(e){ return e.pattern==='vertical_push' || e.pattern==='vertical_pull'; });
@@ -714,7 +721,9 @@ function pickForSlot(slot, pool, used){
   else candidates = pool.filter(function(e){ return e.pattern===slot; });
   candidates = candidates.filter(function(e){ return used.indexOf(e.id)===-1; });
   if(!candidates.length) return null;
-  return candidates[0];
+  // Rotate which candidate leads so different days of the same week (and different
+  // weeks) don't all land on the identical exercise for a given slot.
+  return candidates[rotation % candidates.length];
 }
 
 function exerciseCountForMinutes(min){
@@ -731,13 +740,14 @@ function mobilityPick(idsPreferred){
   return null;
 }
 
-function buildDay(nameHe, pool, count){
+function buildDay(nameHe, pool, count, dayIndex){
   var used = [];
   var blocks = [];
   var i = 0;
+  var round = 0;
   while(blocks.length < count && i < SLOT_ORDER.length){
     var slot = SLOT_ORDER[i];
-    var ex = pickForSlot(slot, pool, used);
+    var ex = pickForSlot(slot, pool, used, dayIndex + round);
     if(ex){
       used.push(ex.id);
       blocks.push({exerciseId:ex.id, sets:2, repRange:ex.repRange.slice(), restSec:ex.restSec});
@@ -745,38 +755,33 @@ function buildDay(nameHe, pool, count){
     i++;
     if(i >= SLOT_ORDER.length && blocks.length < count){
       i = 0;
+      round++;
       var any = pool.filter(function(e){ return used.indexOf(e.id)===-1; });
       if(!any.length) break;
     }
   }
-  var warm = mobilityPick(['cat_cow','hip_circles','shoulder_rolls','treadmill_walk','bike_easy']);
-  var cool = mobilityPick(['child_pose','cat_cow']);
+  var warm = mobilityPick(rotate(['cat_cow','hip_circles','shoulder_rolls','treadmill_walk','bike_easy'], dayIndex));
+  var cool = mobilityPick(rotate(['child_pose','cat_cow'], dayIndex));
   var warmupBlocks = warm ? [{exerciseId:warm.id, sets:1, repRange:warm.repRange.slice(), restSec:0}] : [];
   var cooldownBlocks = cool ? [{exerciseId:cool.id, sets:1, repRange:cool.repRange.slice(), restSec:0}] : [];
   return {id:nameHe.replace(/\s/g,'_'), nameHe:nameHe, warmup:warmupBlocks, blocks:blocks, cooldown:cooldownBlocks};
 }
 
+function rotate(arr, n){
+  var i = n % arr.length;
+  return arr.slice(i).concat(arr.slice(0, i));
+}
+
+var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳'];
+
 function generatePlan(){
   var pool = availableExercises();
   var count = exerciseCountForMinutes(state.profile.sessionMinutes);
   var days = [];
-  var split;
-  if(state.profile.daysPerWeek === 4){
-    split = 'upperlower';
-    var upperPool = pool.filter(function(e){ return ['horizontal_push','horizontal_pull','vertical_push','vertical_pull','core'].indexOf(e.pattern)!==-1; });
-    var lowerPool = pool.filter(function(e){ return ['squat','hinge','lunge','core'].indexOf(e.pattern)!==-1; });
-    days.push(buildDay('פלג גוף עליון א׳', upperPool, count));
-    days.push(buildDay('פלג גוף תחתון א׳', lowerPool, count));
-    days.push(buildDay('פלג גוף עליון ב׳', upperPool, count));
-    days.push(buildDay('פלג גוף תחתון ב׳', lowerPool, count));
-  }else{
-    split = 'fullbody';
-    var letters = ['א׳','ב׳','ג׳'];
-    for(var d=0; d<state.profile.daysPerWeek; d++){
-      days.push(buildDay('גוף מלא ' + letters[d % letters.length], pool, count));
-    }
+  for(var d=0; d<state.profile.daysPerWeek; d++){
+    days.push(buildDay('גוף מלא ' + DAY_LETTERS[d % DAY_LETTERS.length], pool, count, d));
   }
-  return {generatedAt:new Date().toISOString(), split:split, days:days};
+  return {generatedAt:new Date().toISOString(), split:'fullbody', days:days};
 }
 
 /* ---------------------------------------------------------------------
