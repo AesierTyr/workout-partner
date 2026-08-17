@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#fbf8f5">
+<title>המאמנת שלי</title>
+<style>
+  :root{
+    --bg:#fbf8f5;
+    --surface:#ffffff;
+    --border:#e7e0d8;
+    --text:#201d1a;
+    --muted:#6b6259;
+    --accent:#d9542f;
+    --accent-ink:#ffffff;
+    --danger:#b3392a;
+    --ok-bg:#eef3ea;
+    --radius:16px;
+    --tap:56px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,"Segoe UI",Arial,sans-serif;
+    font-size:18px;
+    line-height:1.45;
+    -webkit-tap-highlight-color:transparent;
+    overscroll-behavior-y:contain;
+  }
+  #app{
+    max-width:520px;
+    margin:0 auto;
+    min-height:100vh;
+    padding:20px 18px 40px;
+    display:flex;
+    flex-direction:column;
+  }
+  h1{font-size:26px;margin:6px 0 18px;font-weight:800;}
+  h2{font-size:21px;margin:0 0 10px;font-weight:700;}
+  p{color:var(--muted);margin:0 0 14px;}
+  .step-label{color:var(--muted);font-size:14px;margin-bottom:4px;}
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    min-height:var(--tap);
+    border-radius:14px;
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--text);
+    font-size:18px;
+    font-weight:600;
+    padding:12px 16px;
+    margin-bottom:10px;
+    cursor:pointer;
+    text-align:center;
+  }
+  .btn:active{transform:scale(0.98);}
+  .btn-primary{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:var(--accent-ink);
+    font-size:20px;
+    font-weight:800;
+    min-height:64px;
+  }
+  .btn-primary:disabled{opacity:.4;}
+  .btn-secondary{
+    background:transparent;
+    border:none;
+    color:var(--accent);
+    font-weight:700;
+    min-height:auto;
+    padding:10px;
+  }
+  .btn-danger{color:var(--danger);border-color:var(--danger);}
+  .btn-ghost{
+    background:transparent;
+    color:var(--muted);
+    border:none;
+    text-decoration:underline;
+    min-height:auto;
+    font-weight:500;
+    font-size:16px;
+  }
+  .option-btn{
+    width:100%;
+    text-align:right;
+    min-height:var(--tap);
+    border-radius:14px;
+    border:2px solid var(--border);
+    background:var(--surface);
+    padding:14px 16px;
+    margin-bottom:10px;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .option-btn .opt-title{font-size:19px;font-weight:700;}
+  .option-btn .opt-desc{font-size:14px;color:var(--muted);}
+  .option-btn.selected{border-color:var(--accent);background:#fdf1ec;}
+  input[type=text],textarea{
+    width:100%;
+    font-size:19px;
+    padding:14px;
+    border-radius:14px;
+    border:2px solid var(--border);
+    background:var(--surface);
+    color:var(--text);
+    font-family:inherit;
+    margin-bottom:14px;
+  }
+  textarea{min-height:80px;resize:vertical;}
+  input[type=text]:focus,textarea:focus{outline:none;border-color:var(--accent);}
+  .spacer{flex:1;}
+  .top-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;min-height:32px;}
+  .progress-dots{display:flex;gap:6px;margin-bottom:18px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--border);}
+  .dot.active{background:var(--accent);}
+  .equip-item{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    border:2px solid var(--border);
+    border-radius:14px;
+    padding:12px;
+    margin-bottom:10px;
+    cursor:pointer;
+  }
+  .equip-item.checked{border-color:var(--accent);background:#fdf1ec;}
+  .equip-icon{flex:0 0 52px;width:52px;height:52px;}
+  .equip-icon svg{width:100%;height:100%;}
+  .equip-body{flex:1;min-width:0;}
+  .equip-he{font-size:18px;font-weight:700;}
+  .equip-en{font-size:13px;color:var(--muted);}
+  .equip-desc{font-size:14px;color:var(--muted);margin-top:4px;}
+  .equip-check{
+    flex:0 0 26px;width:26px;height:26px;border-radius:8px;
+    border:2px solid var(--border);
+    display:flex;align-items:center;justify-content:center;
+    margin-top:2px;
+  }
+  .equip-item.checked .equip-check{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .disclaimer-box{
+    background:#fff7ec;
+    border:1px solid #ecd9b8;
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:16px;
+    font-size:15px;
+    color:#4d3c22;
+  }
+  .disclaimer-box b{display:block;margin-bottom:6px;font-size:16px;}
+  .greet{font-size:28px;font-weight:800;margin-bottom:4px;}
+  .subgreet{font-size:17px;color:var(--muted);margin-bottom:22px;}
+  .home-cta{
+    width:100%;
+    min-height:120px;
+    border-radius:20px;
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    font-size:26px;
+    font-weight:800;
+    margin:14px 0 20px;
+    cursor:pointer;
+  }
+  .streak-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:var(--ok-bg);
+    color:#3c5a30;
+    border-radius:999px;
+    padding:8px 14px;
+    font-size:14px;
+    font-weight:600;
+    margin-bottom:16px;
+  }
+  .link-row{display:flex;gap:18px;justify-content:center;margin-top:auto;padding-top:20px;}
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
+    background:#201d1a;color:#fff;padding:12px 20px;border-radius:12px;
+    font-size:15px;z-index:50;max-width:90%;text-align:center;
+  }
+  .day-card{border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;background:var(--surface);}
+  .day-card h3{margin:0 0 8px;font-size:17px;}
+  .ex-row{display:flex;justify-content:space-between;font-size:15px;padding:6px 0;border-top:1px dashed var(--border);}
+  .ex-row:first-of-type{border-top:none;}
+  .muted{color:var(--muted);}
+  bdi{unicode-bidi:isolate;}
+  .checkbox-note{font-size:13px;color:var(--muted);margin:-4px 0 16px;}
+  @media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important;}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+
+/* ---------------------------------------------------------------------
+   STORAGE
+--------------------------------------------------------------------- */
+var STORAGE_KEY = 'coach_v1';
+
+function defaultState(){
+  return {
+    profile:{
+      name:'',
+      daysPerWeek:3,
+      sessionMinutes:45,
+      goal:'general',
+      focusAreas:[],
+      voiceEnabled:true,
+      voiceRate:1,
+      localLangNames:false
+    },
+    equipment:{},
+    equipmentNote:'',
+    plan:null,
+    log:[],
+    disabledExercises:[],
+    streak:{current:0,lastSessionDate:null},
+    localNames:{},
+    setupDone:false,
+    ui:{screen:'setup_name'}
+  };
+}
+
+function loadState(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return defaultState();
+    var parsed = JSON.parse(raw);
+    var d = defaultState();
+    parsed.profile = Object.assign(d.profile, parsed.profile||{});
+    parsed.equipment = parsed.equipment || {};
+    parsed.equipmentNote = parsed.equipmentNote || '';
+    parsed.plan = parsed.plan || null;
+    parsed.log = parsed.log || [];
+    parsed.disabledExercises = parsed.disabledExercises || [];
+    parsed.streak = parsed.streak || d.streak;
+    parsed.localNames = parsed.localNames || {};
+    parsed.setupDone = !!parsed.setupDone;
+    parsed.ui = parsed.ui || {screen: parsed.setupDone ? 'home' : 'setup_name'};
+    return parsed;
+  }catch(e){
+    return defaultState();
+  }
+}
+
+var state = loadState();
+
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){
+    /* storage full or unavailable - nothing we can do offline; fail silently */
+  }
+}
+
+/* ---------------------------------------------------------------------
+   EQUIPMENT LIBRARY
+--------------------------------------------------------------------- */
+function icon(paths){
+  return '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';
+}
+
+var EQUIPMENT = [
+  {id:'dumbbells', he:'משקולות יד', en:'Dumbbells',
+    desc:'משקולות מתכת קטנות שאוחזים ביד אחת, בדרך כלל בערימה לפי משקל.',
+    icon: icon('<circle cx="14" cy="32" r="9"/><circle cx="50" cy="32" r="9"/><line x1="23" y1="32" x2="41" y2="32"/>')},
+  {id:'bench_flat', he:'ספסל שטוח', en:'Flat bench',
+    desc:'ספסל מרופד וישר, בלי אפשרות להטות את הגב שלו.',
+    icon: icon('<rect x="8" y="26" width="48" height="10" rx="2"/><line x1="14" y1="36" x2="14" y2="50"/><line x1="50" y1="36" x2="50" y2="50"/>')},
+  {id:'bench_adj', he:'ספסל מתכוונן', en:'Adjustable bench',
+    desc:'ספסל מרופד שאפשר להרים ולהטות את משענת הגב שלו לזוויות שונות.',
+    icon: icon('<rect x="8" y="30" width="30" height="10" rx="2"/><line x1="36" y1="34" x2="52" y2="12"/><line x1="14" y1="40" x2="14" y2="52"/><line x1="34" y1="40" x2="34" y2="52"/>')},
+  {id:'cable', he:'מתקן פולי / כבלים', en:'Cable machine',
+    desc:'מתקן גבוה עם כבל מתכת שיוצא מגלגלת ומתחבר לידית שמושכים.',
+    icon: icon('<line x1="12" y1="8" x2="12" y2="56"/><circle cx="12" cy="14" r="5"/><line x1="16" y1="18" x2="44" y2="40"/><line x1="40" y1="40" x2="48" y2="40"/>')},
+  {id:'latpulldown', he:'מתקן משיכה עליונה', en:'Lat pulldown',
+    desc:'מתקן עם מוט רחב הפוך למעלה, מושכים אותו כלפי מטה בישיבה.',
+    icon: icon('<line x1="32" y1="6" x2="32" y2="18"/><line x1="14" y1="18" x2="50" y2="18"/><line x1="32" y1="18" x2="32" y2="38"/><rect x="24" y="38" width="16" height="12" rx="2"/><line x1="26" y1="50" x2="26" y2="58"/><line x1="38" y1="50" x2="38" y2="58"/>')},
+  {id:'seatedrow', he:'מתקן חתירה בישיבה', en:'Seated row',
+    desc:'מכונה בישיבה עם משטח לרגליים וידית שמושכים לכיוון הבטן.',
+    icon: icon('<rect x="10" y="34" width="16" height="10" rx="2"/><line x1="26" y1="38" x2="48" y2="38"/><line x1="18" y1="44" x2="18" y2="54"/><line x1="44" y1="34" x2="44" y2="20"/>')},
+  {id:'chestpress', he:'מתקן לחיצת חזה', en:'Chest press machine',
+    desc:'מכונה בישיבה עם שתי ידיות שדוחפים קדימה מול החזה.',
+    icon: icon('<rect x="8" y="14" width="10" height="36" rx="2"/><line x1="18" y1="24" x2="42" y2="24"/><line x1="18" y1="40" x2="42" y2="40"/>')},
+  {id:'shoulderpress', he:'מתקן לחיצת כתפיים', en:'Shoulder press machine',
+    desc:'מכונה בישיבה עם שתי ידיות שדוחפים כלפי מעלה, מעל לראש.',
+    icon: icon('<rect x="14" y="30" width="10" height="24" rx="2"/><line x1="20" y1="30" x2="20" y2="12"/><line x1="44" y1="30" x2="44" y2="12"/><line x1="14" y1="18" x2="26" y2="18"/><line x1="38" y1="18" x2="50" y2="18"/>')},
+  {id:'legpress', he:'מכונת לחיצת רגליים', en:'Leg press',
+    desc:'מכונה נטויה עם משטח גדול שדוחפים אותו קדימה עם שתי הרגליים בישיבה.',
+    icon: icon('<rect x="8" y="38" width="26" height="8" rx="2" transform="rotate(-20 8 38)"/><rect x="30" y="14" width="10" height="30" rx="2"/><line x1="10" y1="52" x2="46" y2="52"/>')},
+  {id:'legcurl', he:'מכונת כפיפת רגליים', en:'Leg curl',
+    desc:'מכונה בשכיבה או ישיבה עם כרית מאחורי הקרסול, כופפים בה את הברך.',
+    icon: icon('<rect x="8" y="30" width="34" height="10" rx="2"/><line x1="42" y1="35" x2="52" y2="20"/><circle cx="52" cy="16" r="4"/>')},
+  {id:'legext', he:'מכונת פשיטת רגליים', en:'Leg extension',
+    desc:'מכונה בישיבה עם כרית מעל הקרסול, מיישרים איתה את הברך קדימה.',
+    icon: icon('<rect x="16" y="14" width="10" height="26" rx="2"/><line x1="21" y1="40" x2="21" y2="52"/><line x1="26" y1="46" x2="48" y2="30"/><circle cx="50" cy="27" r="4"/>')},
+  {id:'smith', he:'מתקן סמית\'', en:'Smith machine',
+    desc:'מוט מתכת ארוך שנע במסילות אנכיות קבועות משני צדדים.',
+    icon: icon('<line x1="14" y1="6" x2="14" y2="58"/><line x1="50" y1="6" x2="50" y2="58"/><line x1="10" y1="26" x2="54" y2="26"/>')},
+  {id:'kettlebell', he:'קטלבל', en:'Kettlebell',
+    desc:'גוש מתכת עגול עם ידית קשת עבה למעלה, כמו קומקום.',
+    icon: icon('<path d="M22 22 a10 10 0 0 1 20 0"/><path d="M18 26 a14 16 0 1 0 28 0 z"/>')},
+  {id:'band', he:'גומיית התנגדות', en:'Resistance band',
+    desc:'רצועת גומי צבעונית וארוכה בלי חלקים קשים, נמתחת בין הידיים.',
+    icon: icon('<path d="M8 40 Q20 12 32 40 T56 24"/>')},
+  {id:'mat', he:'מזרן', en:'Mat',
+    desc:'מזרן דק ורך לתרגילי רצפה.',
+    icon: icon('<rect x="8" y="24" width="48" height="16" rx="4"/>')},
+  {id:'treadmill', he:'הליכון', en:'Treadmill',
+    desc:'מכונה עם רצועה שחורה נעה, שמהלכים או רצים עליה במקום.',
+    icon: icon('<rect x="8" y="38" width="40" height="10" rx="4"/><line x1="40" y1="38" x2="52" y2="14"/><line x1="52" y1="14" x2="58" y2="14"/>')},
+  {id:'bike', he:'אופני כושר', en:'Stationary bike',
+    desc:'אופניים עם מושב שלא זזים ממקום, לדוושות סגורות.',
+    icon: icon('<circle cx="18" cy="42" r="12"/><circle cx="46" cy="42" r="12"/><line x1="18" y1="42" x2="34" y2="18"/><line x1="34" y1="18" x2="46" y2="42"/><line x1="34" y1="18" x2="34" y2="10"/>')},
+  {id:'pullupbar', he:'מתח', en:'Pull-up bar',
+    desc:'מוט קבוע וגבוה שתולים ממנו עם שתי הידיים.',
+    icon: icon('<line x1="10" y1="14" x2="54" y2="14"/><line x1="14" y1="8" x2="14" y2="14"/><line x1="50" y1="8" x2="50" y2="14"/><line x1="24" y1="14" x2="24" y2="24"/><line x1="40" y1="14" x2="40" y2="24"/>')},
+  {id:'hipthrust', he:'מכונת הרמת אגן', en:'Hip thrust machine',
+    desc:'מכונה עם כרית שיושבת על הבטן התחתונה, דוחפים איתה את האגן למעלה בישיבה נשענת.',
+    icon: icon('<rect x="8" y="30" width="14" height="10" rx="2"/><line x1="22" y1="35" x2="44" y2="35"/><circle cx="48" cy="35" r="6"/>')}
+];
+
+/* ---------------------------------------------------------------------
+   PATTERN ICONS (shared two-frame line drawings, keyed by movement pattern)
+--------------------------------------------------------------------- */
+function patternIcon(paths){
+  return '<svg viewBox="0 0 140 60" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">'+
+    '<line x1="70" y1="4" x2="70" y2="56" stroke="var(--border)" stroke-width="1"/>'+paths+'</svg>';
+}
+var PATTERN_ICON = {
+  horizontal_push: patternIcon('<circle cx="20" cy="14" r="6"/><line x1="20" y1="20" x2="20" y2="38"/><line x1="20" y1="24" x2="6" y2="30"/><line x1="20" y1="24" x2="34" y2="24"/><line x1="20" y1="38" x2="12" y2="52"/><line x1="20" y1="38" x2="28" y2="52"/>'+
+    '<circle cx="106" cy="14" r="6"/><line x1="106" y1="20" x2="106" y2="38"/><line x1="106" y1="24" x2="92" y2="24"/><line x1="106" y1="24" x2="126" y2="18"/><line x1="106" y1="38" x2="98" y2="52"/><line x1="106" y1="38" x2="114" y2="52"/>'),
+  vertical_push: patternIcon('<circle cx="20" cy="16" r="6"/><line x1="20" y1="22" x2="20" y2="40"/><line x1="20" y1="26" x2="8" y2="34"/><line x1="20" y1="26" x2="32" y2="34"/><line x1="20" y1="40" x2="12" y2="54"/><line x1="20" y1="40" x2="28" y2="54"/>'+
+    '<circle cx="106" cy="14" r="6"/><line x1="106" y1="20" x2="106" y2="40"/><line x1="106" y1="24" x2="94" y2="8"/><line x1="106" y1="24" x2="118" y2="8"/><line x1="106" y1="40" x2="98" y2="54"/><line x1="106" y1="40" x2="114" y2="54"/>'),
+  horizontal_pull: patternIcon('<circle cx="20" cy="14" r="6"/><line x1="20" y1="20" x2="20" y2="38"/><line x1="20" y1="24" x2="6" y2="18"/><line x1="20" y1="24" x2="34" y2="24"/><line x1="20" y1="38" x2="12" y2="52"/><line x1="20" y1="38" x2="28" y2="52"/>'+
+    '<circle cx="106" cy="14" r="6"/><line x1="106" y1="20" x2="106" y2="38"/><line x1="106" y1="24" x2="120" y2="16"/><line x1="106" y1="24" x2="92" y2="24"/><line x1="106" y1="38" x2="98" y2="52"/><line x1="106" y1="38" x2="114" y2="52"/>'),
+  vertical_pull: patternIcon('<circle cx="20" cy="10" r="6"/><line x1="20" y1="16" x2="20" y2="38"/><line x1="20" y1="20" x2="8" y2="6"/><line x1="20" y1="20" x2="32" y2="6"/><line x1="20" y1="38" x2="12" y2="52"/><line x1="20" y1="38" x2="28" y2="52"/>'+
+    '<circle cx="106" cy="16" r="6"/><line x1="106" y1="22" x2="106" y2="40"/><line x1="106" y1="26" x2="96" y2="18"/><line x1="106" y1="26" x2="116" y2="18"/><line x1="106" y1="40" x2="98" y2="54"/><line x1="106" y1="40" x2="114" y2="54"/>'),
+  squat: patternIcon('<circle cx="20" cy="10" r="6"/><line x1="20" y1="16" x2="20" y2="34"/><line x1="20" y1="34" x2="12" y2="52"/><line x1="20" y1="34" x2="28" y2="52"/><line x1="20" y1="20" x2="10" y2="28"/><line x1="20" y1="20" x2="30" y2="28"/>'+
+    '<circle cx="106" cy="18" r="6"/><path d="M106 24 L106 34 L96 44 L96 54"/><path d="M106 34 L116 44 L116 54"/><line x1="106" y1="28" x2="96" y2="34"/><line x1="106" y1="28" x2="116" y2="34"/>'),
+  hinge: patternIcon('<circle cx="20" cy="10" r="6"/><line x1="20" y1="16" x2="20" y2="34"/><line x1="20" y1="34" x2="12" y2="52"/><line x1="20" y1="34" x2="28" y2="52"/><line x1="20" y1="20" x2="10" y2="30"/><line x1="20" y1="20" x2="30" y2="30"/>'+
+    '<path d="M96 20 L112 26 L120 44"/><circle cx="94" cy="16" r="6"/><line x1="112" y1="26" x2="104" y2="50"/><line x1="112" y1="26" x2="120" y2="50"/><line x1="120" y1="44" x2="128" y2="26"/>'),
+  lunge: patternIcon('<circle cx="20" cy="10" r="6"/><line x1="20" y1="16" x2="20" y2="36"/><line x1="20" y1="20" x2="10" y2="28"/><line x1="20" y1="20" x2="30" y2="28"/><line x1="20" y1="36" x2="12" y2="52"/><line x1="20" y1="36" x2="28" y2="52"/>'+
+    '<circle cx="98" cy="10" r="6"/><line x1="98" y1="16" x2="98" y2="34"/><line x1="98" y1="20" x2="88" y2="26"/><line x1="98" y1="20" x2="108" y2="26"/><line x1="98" y1="34" x2="84" y2="54"/><line x1="98" y1="34" x2="118" y2="46"/><line x1="118" y1="46" x2="118" y2="54"/>'),
+  core: patternIcon('<circle cx="16" cy="30" r="6"/><line x1="22" y1="30" x2="46" y2="30"/><line x1="46" y1="30" x2="56" y2="42"/><line x1="22" y1="30" x2="16" y2="46"/>'+
+    '<circle cx="88" cy="18" r="6"/><line x1="88" y1="24" x2="88" y2="40"/><line x1="88" y1="28" x2="76" y2="24"/><line x1="88" y1="28" x2="100" y2="24"/><line x1="88" y1="40" x2="80" y2="54"/><line x1="88" y1="40" x2="96" y2="54"/>'),
+  carry: patternIcon('<circle cx="20" cy="10" r="6"/><line x1="20" y1="16" x2="20" y2="36"/><line x1="20" y1="22" x2="8" y2="30"/><line x1="20" y1="22" x2="32" y2="30"/><line x1="20" y1="36" x2="14" y2="52"/><line x1="20" y1="36" x2="26" y2="46"/>'+
+    '<circle cx="106" cy="10" r="6"/><line x1="106" y1="16" x2="106" y2="36"/><line x1="106" y1="22" x2="94" y2="30"/><line x1="106" y1="22" x2="118" y2="30"/><line x1="106" y1="36" x2="98" y2="52"/><line x1="106" y1="36" x2="114" y2="46"/>'),
+  mobility: patternIcon('<circle cx="20" cy="14" r="6"/><path d="M14 20 Q20 34 30 40 Q20 46 14 52"/>'+
+    '<circle cx="106" cy="14" r="6"/><path d="M100 20 Q112 26 118 40 Q108 44 100 50"/>')
+};
+
+/* ---------------------------------------------------------------------
+   EXERCISE LIBRARY
+--------------------------------------------------------------------- */
+var EXERCISES = [
+  {id:'chest_press_machine', he:'לחיצת חזה במכונה', en:'Chest Press Machine', local:'',
+    equipment:['chestpress'], muscles:['chest','triceps','shoulders'], primary:'chest',
+    pattern:'horizontal_push', level:1, repRange:[10,12], restSec:60,
+    cues:['שבי זקוף עם הגב צמוד למשענת','דחפי קדימה בנשיפה, בלי לנעול את המרפקים בסוף','חזרי לאט, אל תני למשקל ליפול'],
+    common_mistake:'להרים את הכתפיים לכיוון האוזניים בזמן הדחיפה',
+    substitutes:['db_bench_press','pushup','band_chest_press']},
+  {id:'db_bench_press', he:'לחיצת חזה עם משקולות', en:'Dumbbell Bench Press', local:'',
+    equipment:['dumbbells','bench_flat'], muscles:['chest','triceps','shoulders'], primary:'chest',
+    pattern:'horizontal_push', level:1, repRange:[10,12], restSec:60,
+    cues:['שכבי עם כל כף רגל יציבה על הרצפה','דחפי את המשקולות מעלה בקו ישר מעל החזה','הורידי לאט עד זווית של תשעים מעלות במרפק'],
+    common_mistake:'לתת למרפקים להיפתח לגמרי הצידה במקום לרדת בזווית נוחה',
+    substitutes:['chest_press_machine','pushup','band_chest_press']},
+  {id:'db_incline_press', he:'לחיצת חזה משופעת עם משקולות', en:'Incline Dumbbell Press', local:'',
+    equipment:['dumbbells','bench_adj'], muscles:['chest','shoulders','triceps'], primary:'chest',
+    pattern:'horizontal_push', level:2, repRange:[10,12], restSec:60,
+    cues:['הטי את הספסל לזווית מתונה, לא תלולה מדי','דחפי את המשקולות באלכסון קדימה ומעלה','שמרי על מגע קל בין השכמות לספסל'],
+    common_mistake:'להטות את הספסל בזווית תלולה מדי ולהפוך את זה לתרגיל כתפיים',
+    substitutes:['db_bench_press','chest_press_machine','pushup']},
+  {id:'pushup', he:'שכיבות סמיכה', en:'Push-up', local:'',
+    equipment:[], muscles:['chest','triceps','core'], primary:'chest',
+    pattern:'horizontal_push', level:1, repRange:[6,12], restSec:60,
+    cues:['שמרי על קו ישר מהראש עד העקבים','הדקי את הבטן לפני שאת יורדת','אפשר לרדת על הברכיים אם קשה, זה עדיין עובד מצוין'],
+    common_mistake:'לתת לאגן לצנוח כלפי מטה באמצע התנועה',
+    substitutes:['db_bench_press','chest_press_machine','band_chest_press']},
+  {id:'band_chest_press', he:'לחיצת חזה עם גומייה', en:'Band Chest Press', local:'',
+    equipment:['band'], muscles:['chest','triceps'], primary:'chest',
+    pattern:'horizontal_push', level:1, repRange:[12,15], restSec:45,
+    cues:['קשרי את הגומייה מאחורי הגב בגובה החזה','דחפי קדימה בשליטה, בלי לתת לגומייה למשוך אותך אחורה','שמרי על מרפקים קרובים לגוף בהתחלה'],
+    common_mistake:'לתת לגומייה \"לנצח\" ולחזור בבת אחת בלי שליטה',
+    substitutes:['pushup','chest_press_machine','db_bench_press']},
+  {id:'cable_fly', he:'פרפר בפולי', en:'Cable Fly', local:'',
+    equipment:['cable'], muscles:['chest'], primary:'chest',
+    pattern:'horizontal_push', level:2, repRange:[12,15], restSec:45,
+    cues:['עמדי באמצע בין שני הכבלים עם רגל אחת קדימה','קרבי את הידיים בקשת רחבה מול החזה','שמרי על כיפוף קל וקבוע במרפקים לאורך כל התנועה'],
+    common_mistake:'להפוך את זה ללחיצה ולא לתנועת קשת רחבה',
+    substitutes:['db_bench_press','pushup']},
+  {id:'shoulder_press_machine', he:'לחיצת כתפיים במכונה', en:'Shoulder Press Machine', local:'',
+    equipment:['shoulderpress'], muscles:['shoulders','triceps'], primary:'shoulders',
+    pattern:'vertical_push', level:1, repRange:[10,12], restSec:60,
+    cues:['שבי עם הגב צמוד למשענת ובטן קלות מכווצת','דחפי מעלה בלי לקמר את הגב התחתון','הורידי עד שהמרפקים בגובה הכתפיים בערך'],
+    common_mistake:'לקמר את הגב התחתון כדי \"לעזור\" לדחיפה',
+    substitutes:['db_shoulder_press','band_shoulder_press']},
+  {id:'db_shoulder_press', he:'לחיצת כתפיים עם משקולות', en:'Dumbbell Shoulder Press', local:'',
+    equipment:['dumbbells'], muscles:['shoulders','triceps'], primary:'shoulders',
+    pattern:'vertical_push', level:1, repRange:[10,12], restSec:60,
+    cues:['התחילי עם המשקולות בגובה הכתפיים','דחפי מעלה בקו ישר, לא קדימה','הדקי את הבטן כדי לא לקמר את הגב'],
+    common_mistake:'לדחוף את המשקולות קדימה במקום ישר מעלה',
+    substitutes:['shoulder_press_machine','band_shoulder_press']},
+  {id:'band_shoulder_press', he:'לחיצת כתפיים עם גומייה', en:'Band Shoulder Press', local:'',
+    equipment:['band'], muscles:['shoulders','triceps'], primary:'shoulders',
+    pattern:'vertical_push', level:1, repRange:[12,15], restSec:45,
+    cues:['עמדי על אמצע הגומייה בשתי הרגליים','דחפי מעלה בשליטה משני הצדדים ביחד','שמרי על הליבה מכווצת כדי לא להתקשת'],
+    common_mistake:'לדחוף רק צד אחד חזק יותר מהשני',
+    substitutes:['db_shoulder_press','shoulder_press_machine']},
+  {id:'db_lateral_raise', he:'הרמות צד עם משקולות', en:'Dumbbell Lateral Raise', local:'',
+    equipment:['dumbbells'], muscles:['shoulders'], primary:'shoulders',
+    pattern:'vertical_push', level:1, repRange:[12,15], restSec:45,
+    cues:['התחילי עם משקל קליל מאוד, זה תרגיל בידוד','הרימי את הידיים הצידה עד גובה הכתפיים','כיפוף קל וקבוע במרפק, כמו שופכים כד מים'],
+    common_mistake:'להשתמש בתנופה של הגוף כדי להרים את המשקל',
+    substitutes:['band_shoulder_press']},
+  {id:'pike_pushup', he:'שכיבות סמיכה פייק', en:'Pike Push-up', local:'',
+    equipment:[], muscles:['shoulders','triceps','core'], primary:'shoulders',
+    pattern:'vertical_push', level:2, repRange:[6,10], restSec:60,
+    cues:['הרימי את האגן גבוה כך שהגוף יוצר משולש הפוך','כופפי את המרפקים והורידי את קודקוד הראש לכיוון הרצפה','דחפי חזרה למעלה דרך כפות הידיים'],
+    common_mistake:'לתת לאגן לרדת כך שזה הופך לשכיבת סמיכה רגילה',
+    substitutes:['shoulder_press_machine','db_shoulder_press']},
+  {id:'seated_row_machine', he:'חתירה בישיבה במכונה', en:'Seated Row Machine', local:'',
+    equipment:['seatedrow'], muscles:['back','biceps'], primary:'back',
+    pattern:'horizontal_pull', level:1, repRange:[10,12], restSec:60,
+    cues:['שבי זקוף עם החזה פתוח, לא כפוף קדימה','משכי את הידית לכיוון הבטן, מובילה עם המרפקים','הדקי את השכמות זו לזו בסוף התנועה'],
+    common_mistake:'למשוך עם הגב התחתון ולהתנדנד קדימה ואחורה',
+    substitutes:['cable_row','db_row','band_row']},
+  {id:'cable_row', he:'חתירה בפולי', en:'Cable Row', local:'',
+    equipment:['cable'], muscles:['back','biceps'], primary:'back',
+    pattern:'horizontal_pull', level:1, repRange:[10,12], restSec:60,
+    cues:['שבי או עמדי עם ברכיים רכות וגב זקוף','משכי את הידית לכיוון הבטן התחתונה','שחררי לאט, אל תני למשקולות \"ליפול\"'],
+    common_mistake:'לכופף את הגב במקום לשמור אותו זקוף לאורך התנועה',
+    substitutes:['seated_row_machine','db_row','band_row']},
+  {id:'db_row', he:'חתירה עם משקולת ביד אחת', en:'One-Arm Dumbbell Row', local:'',
+    equipment:['dumbbells','bench_flat'], muscles:['back','biceps'], primary:'back',
+    pattern:'horizontal_pull', level:1, repRange:[10,12], restSec:60,
+    cues:['הישעני ביד ובברך אחת על הספסל, גב ישר וכמעט מקביל לרצפה','משכי את המשקולת לכיוון הצלעות','הורידי לאט עד שהיד כמעט מתיישרת'],
+    common_mistake:'לסובב את הגוף כדי לעזור למשקולת לעלות',
+    substitutes:['seated_row_machine','cable_row','band_row']},
+  {id:'band_row', he:'חתירה עם גומייה', en:'Band Row', local:'',
+    equipment:['band'], muscles:['back','biceps'], primary:'back',
+    pattern:'horizontal_pull', level:1, repRange:[12,15], restSec:45,
+    cues:['קשרי את הגומייה גובה חזה מולך וישבי או עמדי יציב','משכי את שני קצות הגומייה לכיוון הצלעות','הדקי את השכמות בסוף כל חזרה'],
+    common_mistake:'למשוך רק עם הידיים בלי לערב את השכמות',
+    substitutes:['db_row','seated_row_machine','cable_row']},
+  {id:'lat_pulldown_machine', he:'משיכה עליונה במכונה', en:'Lat Pulldown', local:'',
+    equipment:['latpulldown'], muscles:['back','biceps'], primary:'back',
+    pattern:'vertical_pull', level:1, repRange:[10,12], restSec:60,
+    cues:['תפסי את המוט קצת יותר רחב מהכתפיים','משכי את המוט לכיוון החזה העליון, לא מאחורי הראש','תני לחזה להישאר פתוח וזקוף'],
+    common_mistake:'להתנדנד אחורה ולהשתמש במשקל הגוף במקום בגב',
+    substitutes:['band_pulldown','assisted_band_pullup']},
+  {id:'band_pulldown', he:'משיכה עליונה עם גומייה', en:'Band Pulldown', local:'',
+    equipment:['band'], muscles:['back','biceps'], primary:'back',
+    pattern:'vertical_pull', level:1, repRange:[12,15], restSec:45,
+    cues:['קשרי את הגומייה למקום גבוה וקבוע','משכי כלפי מטה לכיוון החזה בשליטה מלאה','חזרי למעלה לאט, בלי לתת לגומייה לקפוץ'],
+    common_mistake:'לבחור נקודת עיגון רופפת שמשנה את זווית המשיכה',
+    substitutes:['lat_pulldown_machine']},
+  {id:'assisted_band_pullup', he:'מתח בעזרת גומייה', en:'Band-Assisted Pull-up', local:'',
+    equipment:['pullupbar','band'], muscles:['back','biceps'], primary:'back',
+    pattern:'vertical_pull', level:2, repRange:[5,8], restSec:75,
+    cues:['לופפי את הגומייה סביב המוט ושימי את הברך או כף הרגל בתוכה','משכי את עצמך מעלה עד שהסנטר עובר את המוט','רדי לאט, אל תיפלי בחזרה למטה'],
+    common_mistake:'להשתמש בתנועת בעיטה כדי \"לזרוק\" את הגוף מעלה',
+    substitutes:['lat_pulldown_machine','band_pulldown']},
+  {id:'straight_arm_pulldown', he:'משיכת ידיים ישרות בפולי', en:'Straight-Arm Pulldown', local:'',
+    equipment:['cable'], muscles:['back'], primary:'back',
+    pattern:'vertical_pull', level:2, repRange:[12,15], restSec:45,
+    cues:['עמדי מול הפולי הגבוה עם ידיים כמעט ישרות','הורידי את הידיים בקשת עד לצד הירכיים','שמרי על מרפק כמעט נעול לאורך כל התנועה'],
+    common_mistake:'לכופף את המרפקים ולהפוך את זה לתרגיל טריצפס',
+    substitutes:['lat_pulldown_machine']},
+  {id:'goblet_squat_db', he:'סקוואט גובלט עם משקולת', en:'Goblet Squat (Dumbbell)', local:'',
+    equipment:['dumbbells'], muscles:['quads','glutes','core'], primary:'legs',
+    pattern:'squat', level:1, repRange:[10,12], restSec:75,
+    cues:['אחזי את המשקולת צמוד לחזה בשתי ידיים','רדי לאחור ולמטה כאילו את יושבת על כיסא','שמרי על הברכיים בכיוון אצבעות הרגליים'],
+    common_mistake:'לתת לברכיים ליפול פנימה בזמן הירידה',
+    substitutes:['goblet_squat_kb','bodyweight_squat','leg_press_machine']},
+  {id:'goblet_squat_kb', he:'סקוואט גובלט עם קטלבל', en:'Goblet Squat (Kettlebell)', local:'',
+    equipment:['kettlebell'], muscles:['quads','glutes','core'], primary:'legs',
+    pattern:'squat', level:1, repRange:[10,12], restSec:75,
+    cues:['אחזי את הקטלבל בשתי ידיים צמוד לחזה, הפוך כמו כד','רדי לאחור ולמטה בשליטה','דחפי דרך העקבים בחזרה למעלה'],
+    common_mistake:'להרים את העקבים מהרצפה בירידה',
+    substitutes:['goblet_squat_db','bodyweight_squat','leg_press_machine']},
+  {id:'leg_press_machine', he:'לחיצת רגליים במכונה', en:'Leg Press', local:'',
+    equipment:['legpress'], muscles:['quads','glutes'], primary:'legs',
+    pattern:'squat', level:1, repRange:[10,12], restSec:75,
+    cues:['הניחי את הרגליים על המשטח ברוחב כתפיים','הורידי עד זווית תשעים מעלות בברך, לא פחות','דחפי דרך כל כף הרגל, לא רק הבהונות'],
+    common_mistake:'לנעול את הברכיים לגמרי בסוף הדחיפה',
+    substitutes:['goblet_squat_db','smith_squat','bodyweight_squat']},
+  {id:'bodyweight_squat', he:'סקוואט משקל גוף', en:'Bodyweight Squat', local:'',
+    equipment:[], muscles:['quads','glutes'], primary:'legs',
+    pattern:'squat', level:1, repRange:[12,15], restSec:60,
+    cues:['רגליים ברוחב כתפיים, אצבעות מעט פתוחות החוצה','רדי לאחור ולמטה, חזה נשאר זקוף','דחפי מהעקבים כדי לחזור למעלה'],
+    common_mistake:'להטות את הגו קדימה חזק מדי במקום לשבת אחורה',
+    substitutes:['goblet_squat_db','leg_press_machine']},
+  {id:'smith_squat', he:'סקוואט במתקן סמית\'', en:'Smith Machine Squat', local:'',
+    equipment:['smith'], muscles:['quads','glutes'], primary:'legs',
+    pattern:'squat', level:2, repRange:[8,10], restSec:90,
+    cues:['הניחי את המוט על הכתפיים העליונות, לא על הצוואר','צעדי צעד קטן קדימה מהמוט לפני שאת יורדת','רדי בשליטה עד זווית תשעים מעלות בברך'],
+    common_mistake:'לעמוד ישר מתחת למוט כך שהברכיים נדחקות בירידה',
+    substitutes:['leg_press_machine','goblet_squat_db']},
+  {id:'leg_extension_machine', he:'פשיטת רגליים במכונה', en:'Leg Extension', local:'',
+    equipment:['legext'], muscles:['quads'], primary:'legs',
+    pattern:'squat', level:1, repRange:[12,15], restSec:45,
+    cues:['כווני את הכרית מעל הקרסול, לא על כף הרגל','יישרי את הברך בשליטה, בלי לבעוט','הורידי לאט, אל תני למשקל \"ליפול\"'],
+    common_mistake:'לנעול את הברך בחוזקה בסוף כל חזרה',
+    substitutes:['bodyweight_squat']},
+  {id:'db_rdl', he:'דדליפט רומני עם משקולות', en:'Dumbbell RDL', local:'',
+    equipment:['dumbbells'], muscles:['hamstrings','glutes','back'], primary:'legs',
+    pattern:'hinge', level:1, repRange:[10,12], restSec:75,
+    cues:['החזיקי את המשקולות קרוב לגוף לאורך כל התנועה','שלחי את האגן אחורה, גב ישר לאורך כל הדרך','ירדי עד שאת מרגישה מתיחה בירך האחורית, לא עד הרצפה'],
+    common_mistake:'לעגל את הגב התחתון בירידה',
+    substitutes:['band_deadlift','hip_thrust_machine']},
+  {id:'hip_thrust_machine', he:'הרמת אגן במכונה', en:'Hip Thrust Machine', local:'',
+    equipment:['hipthrust'], muscles:['glutes','hamstrings'], primary:'legs',
+    pattern:'hinge', level:1, repRange:[10,12], restSec:75,
+    cues:['מקמי את הכרית על הבטן התחתונה, לא על הבטן העליונה','דחפי דרך העקבים ולחצי את הישבן בסוף התנועה','אל תקמרי את הגב התחתון בשיא התנועה'],
+    common_mistake:'לדחוף עם הגב התחתון במקום עם הישבן',
+    substitutes:['db_hip_thrust','glute_bridge']},
+  {id:'db_hip_thrust', he:'הרמת אגן עם משקולת', en:'Dumbbell Hip Thrust', local:'',
+    equipment:['dumbbells','bench_flat'], muscles:['glutes','hamstrings'], primary:'legs',
+    pattern:'hinge', level:1, repRange:[10,12], restSec:75,
+    cues:['הישעני עם השכמות על הספסל ורגליים כפופות ברצפה','הניחי את המשקולת על הבטן התחתונה','דחפי מעלה עד שהגוף יוצר קו ישר מהברכיים לכתפיים'],
+    common_mistake:'לדחוף רק חלקית ולא להגיע לנעילה מלאה של הישבן',
+    substitutes:['hip_thrust_machine','glute_bridge']},
+  {id:'leg_curl_machine', he:'כפיפת רגליים במכונה', en:'Leg Curl', local:'',
+    equipment:['legcurl'], muscles:['hamstrings'], primary:'legs',
+    pattern:'hinge', level:1, repRange:[12,15], restSec:45,
+    cues:['כווני את הכרית מעל הקרסול','כופפי את הברכיים בשליטה, לא בתנופה','הורידי לאט עד שהרגליים כמעט מתיישרות'],
+    common_mistake:'להרים את האגן מהמושב כדי לסחוט עוד חזרה',
+    substitutes:['db_rdl']},
+  {id:'band_deadlift', he:'דדליפט עם גומייה', en:'Band Deadlift', local:'',
+    equipment:['band'], muscles:['hamstrings','glutes','back'], primary:'legs',
+    pattern:'hinge', level:1, repRange:[12,15], restSec:60,
+    cues:['עמדי במרכז הגומייה, רגליים ברוחב האגן','שלחי אגן אחורה וגב ישר, כמו שאת סוגרת דלת מכונית עם הישבן','חזרי למעלה בלחיצת ישבן'],
+    common_mistake:'לכופף את הגב במקום לכופף במפרק הירך',
+    substitutes:['db_rdl']},
+  {id:'glute_bridge', he:'גשר ישבן', en:'Glute Bridge', local:'',
+    equipment:['mat'], muscles:['glutes','hamstrings'], primary:'legs',
+    pattern:'hinge', level:1, repRange:[12,15], restSec:45,
+    cues:['שכבי על הגב עם ברכיים כפופות וכפות רגליים על הרצפה','דחפי דרך העקבים והרימי את האגן','לחצי את הישבן בשיא התנועה במקום לקמר את הגב'],
+    common_mistake:'לדחוף בעיקר עם קימור הגב התחתון',
+    substitutes:['db_hip_thrust','hip_thrust_machine']},
+  {id:'db_lunge', he:'לאנג\' עם משקולות', en:'Dumbbell Lunge', local:'',
+    equipment:['dumbbells'], muscles:['quads','glutes'], primary:'legs',
+    pattern:'lunge', level:1, repRange:[8,10], restSec:60,
+    cues:['צעדי צעד גדול קדימה ושמרי על גו זקוף','הורידי את הברך האחורית כמעט עד הרצפה','דחפי מהעקב הקדמי כדי לחזור לעמידה'],
+    common_mistake:'לתת לברך הקדמית לצאת מעבר לקצות האצבעות בצורה לא יציבה',
+    substitutes:['bodyweight_lunge','step_up']},
+  {id:'bodyweight_lunge', he:'לאנג\' משקל גוף', en:'Bodyweight Lunge', local:'',
+    equipment:[], muscles:['quads','glutes'], primary:'legs',
+    pattern:'lunge', level:1, repRange:[10,12], restSec:60,
+    cues:['צעדי צעד גדול קדימה','ירדי ישר למטה, לא קדימה','חזרי לעמידה בדחיפה מהרגל הקדמית'],
+    common_mistake:'לאבד שיווי משקל כי הצעד קטן מדי',
+    substitutes:['db_lunge','step_up']},
+  {id:'step_up', he:'עלייה לספסל', en:'Step-Up', local:'',
+    equipment:['bench_flat'], muscles:['quads','glutes'], primary:'legs',
+    pattern:'lunge', level:1, repRange:[8,10], restSec:60,
+    cues:['הניחי כף רגל שלמה על הספסל, לא רק את הבהונות','דחפי דרך הרגל שעל הספסל כדי לעלות','ירדי באיטיות ובשליטה'],
+    common_mistake:'לדחוף מהרגל שנשארת על הרצפה במקום מהרגל שעל הספסל',
+    substitutes:['db_lunge','bodyweight_lunge']},
+  {id:'bulgarian_split_squat', he:'סקוואט בולגרי', en:'Bulgarian Split Squat', local:'',
+    equipment:['bench_flat','dumbbells'], muscles:['quads','glutes'], primary:'legs',
+    pattern:'lunge', level:2, repRange:[8,10], restSec:75,
+    cues:['הניחי את גב כף הרגל האחורית על הספסל','ירדי ישר למטה עם הרגל הקדמית','שמרי על הגו כמעט זקוף לאורך התנועה'],
+    common_mistake:'להניח את הרגל האחורית רחוק מדי או קרוב מדי לספסל',
+    substitutes:['db_lunge','step_up']},
+  {id:'plank', he:'פלאנק', en:'Plank', local:'',
+    equipment:['mat'], muscles:['core'], primary:'core',
+    pattern:'core', level:1, repRange:[20,40], restSec:30,
+    cues:['מרפקים מתחת לכתפיים בדיוק','קו ישר מהראש עד העקבים','נשמי בשקט, אל תעצרי את הנשימה'],
+    common_mistake:'לתת לאגן לצנוח או להתרומם גבוה מדי',
+    substitutes:['dead_bug','bird_dog']},
+  {id:'side_plank', he:'פלאנק צד', en:'Side Plank', local:'',
+    equipment:['mat'], muscles:['core','obliques'], primary:'core',
+    pattern:'core', level:2, repRange:[15,30], restSec:30,
+    cues:['מרפק בדיוק מתחת לכתף','הרימי את האגן עד שהגוף קו ישר אחד','שמרי על מבט קדימה, לא למטה'],
+    common_mistake:'לתת לירך התחתונה לצנוח לכיוון הרצפה',
+    substitutes:['plank']},
+  {id:'dead_bug', he:'דד באג', en:'Dead Bug', local:'',
+    equipment:['mat'], muscles:['core'], primary:'core',
+    pattern:'core', level:1, repRange:[8,12], restSec:30,
+    cues:['שכבי על הגב עם ברכיים כפופות בתשעים מעלות','הצמידי את הגב התחתון לרצפה לאורך כל התרגיל','הורידי יד ורגל נגדיות באיטיות ובשליטה'],
+    common_mistake:'לתת לגב התחתון להתרומם מהרצפה',
+    substitutes:['bird_dog','plank']},
+  {id:'pilates_hundred', he:'המאה', en:'The Hundred (Pilates)', local:'',
+    equipment:['mat'], muscles:['core'], primary:'core',
+    pattern:'core', level:1, repRange:[50,100], restSec:30,
+    cues:['הרימי ראש וכתפיים מהמזרן, מבט לכיוון הבטן','שאבי בטן פנימה ולמעלה כל הזמן','שאפי בארבע פעימות ונשפי בארבע פעימות תוך כדי הנעת הידיים'],
+    common_mistake:'לתת לצוואר להימתח במקום שהתנועה תגיע מהבטן',
+    substitutes:['plank']},
+  {id:'pilates_roll_up', he:'רול אפ', en:'Roll-Up (Pilates)', local:'',
+    equipment:['mat'], muscles:['core'], primary:'core',
+    pattern:'core', level:2, repRange:[6,10], restSec:30,
+    cues:['התחילי בשכיבה עם ידיים מעל הראש','גלגלי חוליה אחר חוליה, לא בקפיצה אחת','שאבי בטן פנימה לאורך כל התנועה'],
+    common_mistake:'להשתמש בתנופה במקום לגלגל לאט חוליה חוליה',
+    substitutes:['pilates_hundred']},
+  {id:'pilates_swan', he:'סוואן', en:'Swan (Pilates)', local:'',
+    equipment:['mat'], muscles:['back','core'], primary:'core',
+    pattern:'core', level:1, repRange:[8,12], restSec:30,
+    cues:['שכבי על הבטן עם ידיים מתחת לכתפיים','הרימי חזה מהמזרן באיטיות, מאריכה את עמוד השדרה','הדקי ישבן קלות כדי להגן על הגב התחתון'],
+    common_mistake:'להרים חזק מדי ולקמר רק את הגב התחתון',
+    substitutes:['bird_dog']},
+  {id:'bird_dog', he:'ציפור-כלב', en:'Bird Dog', local:'',
+    equipment:['mat'], muscles:['core','back'], primary:'core',
+    pattern:'core', level:1, repRange:[8,12], restSec:30,
+    cues:['עמדי על ארבע, ידיים מתחת לכתפיים וברכיים מתחת לאגן','שלחי יד ורגל נגדיות בו-זמנית, ישר ואופקי','שמרי על האגן יציב, בלי להתגלגל הצידה'],
+    common_mistake:'להרים את הרגל גבוה מדי כך שהגב מתקמר',
+    substitutes:['dead_bug','plank']},
+  {id:'russian_twist', he:'טוויסט רוסי', en:'Russian Twist', local:'',
+    equipment:['mat'], muscles:['core','obliques'], primary:'core',
+    pattern:'core', level:1, repRange:[16,24], restSec:30,
+    cues:['שבי עם ברכיים כפופות וגו מוטה מעט אחורה','סובבי מהחזה, לא רק מהידיים','שמרי על תנועה איטית ונשלטת לכל צד'],
+    common_mistake:'לסבב מהר מדי בלי שליטה על הליבה',
+    substitutes:['dead_bug']},
+  {id:'farmers_carry_db', he:'הליכת חוואי עם משקולות', en:'Farmer\'s Carry', local:'',
+    equipment:['dumbbells'], muscles:['core','forearms','shoulders'], primary:'core',
+    pattern:'carry', level:1, repRange:[20,40], restSec:60,
+    cues:['אחזי משקולת בכל יד לצידי הגוף','עמדי זקופה, כתפיים אחורה ולמטה','צעדי צעדים קטנים ויציבים, בלי להתנדנד'],
+    common_mistake:'לתת לכתף אחת לצנוח בגלל המשקל',
+    substitutes:['suitcase_carry_kb']},
+  {id:'suitcase_carry_kb', he:'הליכת מזוודה עם קטלבל', en:'Suitcase Carry', local:'',
+    equipment:['kettlebell'], muscles:['core','obliques'], primary:'core',
+    pattern:'carry', level:2, repRange:[20,40], restSec:60,
+    cues:['אחזי את הקטלבל ביד אחת בלבד לצד הגוף','שמרי על הגו זקוף לגמרי, בלי להיטות הצידה','צעדי בקצב קבוע ואיטי'],
+    common_mistake:'להיטות את כל הגוף לכיוון הצד הנגדי כדי לפצות',
+    substitutes:['farmers_carry_db']},
+  {id:'cat_cow', he:'חתול-פרה', en:'Cat-Cow', local:'',
+    equipment:['mat'], muscles:['mobility'], primary:'mobility',
+    pattern:'mobility', level:1, repRange:[8,10], restSec:0,
+    cues:['עמדי על ארבע, ידיים מתחת לכתפיים','נשפי ועגלי את הגב לכיוון התקרה','שאפי והורידי את הבטן תוך הרמת הראש בעדינות'],
+    common_mistake:'לזוז מהר מדי בלי לחבר לנשימה',
+    substitutes:[]},
+  {id:'child_pose', he:'ישיבת הילד', en:'Child\'s Pose', local:'',
+    equipment:['mat'], muscles:['mobility'], primary:'mobility',
+    pattern:'mobility', level:1, repRange:[1,1], restSec:0,
+    cues:['שבי על העקבים והושיטי ידיים קדימה','תני למצח לנוח על המזרן','נשמי עמוק וארוך, שחררי את הכתפיים'],
+    common_mistake:'להדק את הכתפיים במקום לשחרר אותן',
+    substitutes:[]},
+  {id:'shoulder_rolls', he:'סיבובי כתפיים', en:'Shoulder Rolls', local:'',
+    equipment:[], muscles:['mobility'], primary:'mobility',
+    pattern:'mobility', level:1, repRange:[8,10], restSec:0,
+    cues:['הרימי את הכתפיים לכיוון האוזניים','סובבי אחורה ולמטה בתנועה עגולה','חזרי מספר פעמים בקצב נינוח'],
+    common_mistake:'לסובב מהר מדי ולא בטווח מלא',
+    substitutes:[]},
+  {id:'hip_circles', he:'סיבובי אגן', en:'Hip Circles', local:'',
+    equipment:[], muscles:['mobility'], primary:'mobility',
+    pattern:'mobility', level:1, repRange:[8,10], restSec:0,
+    cues:['ידיים על המותניים, רגליים ברוחב האגן','סובבי את האגן במעגלים גדולים','חזרי לכיוון ההפוך אחרי כמה חזרות'],
+    common_mistake:'לזוז רק מהברכיים במקום מהאגן',
+    substitutes:[]},
+  {id:'treadmill_walk', he:'הליכה על הליכון', en:'Treadmill Walk', local:'',
+    equipment:['treadmill'], muscles:['mobility'], primary:'mobility',
+    pattern:'mobility', level:1, repRange:[1,1], restSec:0,
+    cues:['התחילי בקצב הליכה נינוח','הניפי ידיים בטבעיות','הרימי קצב בהדרגה עד שאת מרגישה חמה'],
+    common_mistake:'להתחיל בקצב מהיר מדי בלי חימום הדרגתי',
+    substitutes:['bike_easy']},
+  {id:'bike_easy', he:'רכיבה קלה על אופני כושר', en:'Easy Bike', local:'',
+    equipment:['bike'], muscles:['mobility'], primary:'mobility',
+    pattern:'mobility', level:1, repRange:[1,1], restSec:0,
+    cues:['כווני את גובה המושב כך שהברך כמעט מתיישרת בדיווש','רכבי בקצב קל ונינוח','הגבירי בהדרגה עד שאת מרגישה חמה'],
+    common_mistake:'לרכב עם מושב נמוך מדי שמעמיס על הברכיים',
+    substitutes:['treadmill_walk']}
+];
+
+EXERCISES.forEach(function(ex){
+  if(!ex.svg) ex.svg = PATTERN_ICON[ex.pattern] || PATTERN_ICON.core;
+});
+var EXERCISE_BY_ID = {};
+EXERCISES.forEach(function(ex){ EXERCISE_BY_ID[ex.id] = ex; });
+
+/* ---------------------------------------------------------------------
+   BASIC PLAN GENERATOR (phase 1 - simplified; full §8 algorithm in phase 2)
+--------------------------------------------------------------------- */
+var SLOT_ORDER = ['squat_lunge','hinge','horizontal_push','horizontal_pull','vertical','core','accessory'];
+
+function hasEquipmentFor(ex){
+  // Bodyweight and mat exercises must always be available, even with a
+  // completely empty equipment checklist, so a valid plan can always be built.
+  return ex.equipment.every(function(id){ return id === 'mat' || !!state.equipment[id]; });
+}
+
+function availableExercises(){
+  return EXERCISES.filter(function(ex){
+    if(ex.pattern === 'mobility') return false;
+    if(ex.level > 1) return false;
+    if(state.disabledExercises.indexOf(ex.id) !== -1) return false;
+    return hasEquipmentFor(ex);
+  });
+}
+
+function pickForSlot(slot, pool, used){
+  var candidates;
+  if(slot === 'squat_lunge') candidates = pool.filter(function(e){ return e.pattern==='squat' || e.pattern==='lunge'; });
+  else if(slot === 'vertical') candidates = pool.filter(function(e){ return e.pattern==='vertical_push' || e.pattern==='vertical_pull'; });
+  else if(slot === 'accessory') candidates = pool.filter(function(e){ return ['squat','hinge','vertical_push','vertical_pull'].indexOf(e.pattern)!==-1; });
+  else candidates = pool.filter(function(e){ return e.pattern===slot; });
+  candidates = candidates.filter(function(e){ return used.indexOf(e.id)===-1; });
+  if(!candidates.length) return null;
+  return candidates[0];
+}
+
+function exerciseCountForMinutes(min){
+  if(min <= 30) return 5;
+  if(min <= 45) return 7;
+  return 8;
+}
+
+function mobilityPick(idsPreferred){
+  for(var i=0;i<idsPreferred.length;i++){
+    var ex = EXERCISE_BY_ID[idsPreferred[i]];
+    if(ex && hasEquipmentFor(ex)) return ex;
+  }
+  return null;
+}
+
+function buildDay(nameHe, pool, count){
+  var used = [];
+  var blocks = [];
+  var i = 0;
+  while(blocks.length < count && i < SLOT_ORDER.length){
+    var slot = SLOT_ORDER[i];
+    var ex = pickForSlot(slot, pool, used);
+    if(ex){
+      used.push(ex.id);
+      blocks.push({exerciseId:ex.id, sets:2, repRange:ex.repRange.slice(), restSec:ex.restSec});
+    }
+    i++;
+    if(i >= SLOT_ORDER.length && blocks.length < count){
+      i = 0;
+      var any = pool.filter(function(e){ return used.indexOf(e.id)===-1; });
+      if(!any.length) break;
+    }
+  }
+  var warm = mobilityPick(['cat_cow','hip_circles','shoulder_rolls','treadmill_walk','bike_easy']);
+  var cool = mobilityPick(['child_pose','cat_cow']);
+  var warmupBlocks = warm ? [{exerciseId:warm.id, sets:1, repRange:warm.repRange.slice(), restSec:0}] : [];
+  var cooldownBlocks = cool ? [{exerciseId:cool.id, sets:1, repRange:cool.repRange.slice(), restSec:0}] : [];
+  return {id:nameHe.replace(/\s/g,'_'), nameHe:nameHe, warmup:warmupBlocks, blocks:blocks, cooldown:cooldownBlocks};
+}
+
+function generatePlan(){
+  var pool = availableExercises();
+  var count = exerciseCountForMinutes(state.profile.sessionMinutes);
+  var days = [];
+  var split;
+  if(state.profile.daysPerWeek === 4){
+    split = 'upperlower';
+    var upperPool = pool.filter(function(e){ return ['horizontal_push','horizontal_pull','vertical_push','vertical_pull','core'].indexOf(e.pattern)!==-1; });
+    var lowerPool = pool.filter(function(e){ return ['squat','hinge','lunge','core'].indexOf(e.pattern)!==-1; });
+    days.push(buildDay('פלג גוף עליון א׳', upperPool, count));
+    days.push(buildDay('פלג גוף תחתון א׳', lowerPool, count));
+    days.push(buildDay('פלג גוף עליון ב׳', upperPool, count));
+    days.push(buildDay('פלג גוף תחתון ב׳', lowerPool, count));
+  }else{
+    split = 'fullbody';
+    var letters = ['א׳','ב׳','ג׳'];
+    for(var d=0; d<state.profile.daysPerWeek; d++){
+      days.push(buildDay('גוף מלא ' + letters[d % letters.length], pool, count));
+    }
+  }
+  return {generatedAt:new Date().toISOString(), split:split, days:days};
+}
+
+/* ---------------------------------------------------------------------
+   RENDER HELPERS
+--------------------------------------------------------------------- */
+var app = document.getElementById('app');
+
+function go(screen){
+  state.ui = {screen:screen};
+  saveState();
+  render();
+}
+
+function toast(msg){
+  var t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 2200);
+}
+
+function esc(s){
+  var d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+
+function render(){
+  var screen = state.ui.screen;
+  app.innerHTML = '';
+  switch(screen){
+    case 'setup_name': renderSetupName(); break;
+    case 'setup_days': renderSetupDays(); break;
+    case 'setup_minutes': renderSetupMinutes(); break;
+    case 'setup_goal': renderSetupGoal(); break;
+    case 'disclaimer': renderDisclaimer(); break;
+    case 'walkthrough': renderWalkthrough(); break;
+    case 'home': renderHome(); break;
+    case 'settings': renderSettings(); break;
+    default: renderHome();
+  }
+}
+
+function setupProgress(stepIndex){
+  var total = 4;
+  var wrap = document.createElement('div');
+  wrap.className = 'progress-dots';
+  for(var i=0;i<total;i++){
+    var dot = document.createElement('div');
+    dot.className = 'dot' + (i<=stepIndex ? ' active' : '');
+    wrap.appendChild(dot);
+  }
+  return wrap;
+}
+
+/* ---------------------------------------------------------------------
+   SETUP: NAME
+--------------------------------------------------------------------- */
+function renderSetupName(){
+  app.appendChild(setupProgress(0));
+  var h = document.createElement('h1');
+  h.textContent = 'איך קוראים לך?';
+  app.appendChild(h);
+  var p = document.createElement('p');
+  p.textContent = 'ככה אני אפנה אלייך באימונים.';
+  app.appendChild(p);
+
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = 'השם שלך';
+  input.value = state.profile.name;
+  input.autocomplete = 'off';
+  app.appendChild(input);
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+
+  var btn = document.createElement('button');
+  btn.className = 'btn btn-primary';
+  btn.textContent = 'המשך';
+  btn.disabled = !input.value.trim();
+  app.appendChild(btn);
+
+  input.addEventListener('input', function(){
+    btn.disabled = !input.value.trim();
+  });
+  btn.addEventListener('click', function(){
+    var name = input.value.trim();
+    if(!name) return;
+    state.profile.name = name;
+    saveState();
+    go('setup_days');
+  });
+}
+
+/* ---------------------------------------------------------------------
+   SETUP: DAYS PER WEEK
+--------------------------------------------------------------------- */
+function renderSetupDays(){
+  app.appendChild(setupProgress(1));
+  var h = document.createElement('h1');
+  h.textContent = 'כמה פעמים בשבוע תרצי להתאמן?';
+  app.appendChild(h);
+
+  var options = [
+    {v:2, title:'2 פעמים בשבוע', desc:'אימון גוף מלא בכל פעם'},
+    {v:3, title:'3 פעמים בשבוע', desc:'אימון גוף מלא בכל פעם'},
+    {v:4, title:'4 פעמים בשבוע', desc:'עליון ותחתון לסירוגין'}
+  ];
+  options.forEach(function(opt){
+    var b = document.createElement('button');
+    b.className = 'option-btn' + (state.profile.daysPerWeek===opt.v ? ' selected' : '');
+    b.innerHTML = '<span class="opt-title">'+esc(opt.title)+'</span><span class="opt-desc">'+esc(opt.desc)+'</span>';
+    b.addEventListener('click', function(){
+      state.profile.daysPerWeek = opt.v;
+      saveState();
+      go('setup_minutes');
+    });
+    app.appendChild(b);
+  });
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+  app.appendChild(backLink('setup_name'));
+}
+
+/* ---------------------------------------------------------------------
+   SETUP: SESSION MINUTES
+--------------------------------------------------------------------- */
+function renderSetupMinutes(){
+  app.appendChild(setupProgress(2));
+  var h = document.createElement('h1');
+  h.textContent = 'כמה זמן יש לך לכל אימון?';
+  app.appendChild(h);
+
+  var options = [30,45,60];
+  options.forEach(function(v){
+    var b = document.createElement('button');
+    b.className = 'option-btn' + (state.profile.sessionMinutes===v ? ' selected' : '');
+    b.innerHTML = '<span class="opt-title">'+v+' דקות</span>';
+    b.addEventListener('click', function(){
+      state.profile.sessionMinutes = v;
+      saveState();
+      go('setup_goal');
+    });
+    app.appendChild(b);
+  });
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+  app.appendChild(backLink('setup_days'));
+}
+
+/* ---------------------------------------------------------------------
+   SETUP: GOAL
+--------------------------------------------------------------------- */
+function renderSetupGoal(){
+  app.appendChild(setupProgress(3));
+  var h = document.createElement('h1');
+  h.textContent = 'מה המטרה שלך?';
+  app.appendChild(h);
+
+  var options = [
+    {v:'strength', title:'חיזוק', desc:'להתחזק ולהרים משקלים כבדים יותר עם הזמן'},
+    {v:'tone', title:'חיטוב', desc:'לחטב ולשפר את הטונוס השרירי'},
+    {v:'general', title:'כושר כללי', desc:'לשפר בריאות, אנרגיה וכושר גופני כללי'}
+  ];
+  options.forEach(function(opt){
+    var b = document.createElement('button');
+    b.className = 'option-btn' + (state.profile.goal===opt.v ? ' selected' : '');
+    b.innerHTML = '<span class="opt-title">'+esc(opt.title)+'</span><span class="opt-desc">'+esc(opt.desc)+'</span>';
+    b.addEventListener('click', function(){
+      state.profile.goal = opt.v;
+      saveState();
+      go('disclaimer');
+    });
+    app.appendChild(b);
+  });
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+  app.appendChild(backLink('setup_minutes'));
+}
+
+function backLink(target){
+  var a = document.createElement('button');
+  a.className = 'btn btn-ghost';
+  a.textContent = 'חזרה';
+  a.addEventListener('click', function(){ go(target); });
+  return a;
+}
+
+/* ---------------------------------------------------------------------
+   DISCLAIMER (also reused permanently in settings)
+--------------------------------------------------------------------- */
+function disclaimerHTML(){
+  return '<b>לפני שמתחילים - חשוב</b>' +
+    'האפליקציה הזו היא לא פיזיותרפיסטית ולא מאמנת אישית מוסמכת. ' +
+    'היא עוזרת לך לתכנן ולעקוב אחרי אימונים, אבל אין לה עיניים שרואות את הטכניקה שלך. ' +
+    'אם משהו כואב - כאב חד, כאב במפרק, לא סתם צריבה רגילה בשריר - תפסיקי מיד. ' +
+    'שווה לשלם על מפגש או שניים עם מאמן או מאמנת בחדר הכושר כדי לבדוק טכניקה, במיוחד בהתחלה.';
+}
+
+function renderDisclaimer(){
+  var h = document.createElement('h1');
+  h.textContent = 'רגע לפני שממשיכים';
+  app.appendChild(h);
+
+  var box = document.createElement('div');
+  box.className = 'disclaimer-box';
+  box.innerHTML = disclaimerHTML();
+  app.appendChild(box);
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+
+  var btn = document.createElement('button');
+  btn.className = 'btn btn-primary';
+  btn.textContent = 'הבנתי, בואי נמשיך';
+  btn.addEventListener('click', function(){ go('walkthrough'); });
+  app.appendChild(btn);
+  app.appendChild(backLink('setup_goal'));
+}
+
+/* ---------------------------------------------------------------------
+   GYM WALKTHROUGH
+--------------------------------------------------------------------- */
+function renderWalkthrough(fromSettings){
+  app.innerHTML = '';
+  var h = document.createElement('h1');
+  h.textContent = 'סיור בחדר הכושר';
+  app.appendChild(h);
+  var p = document.createElement('p');
+  p.textContent = 'בפעם הראשונה שאת מגיעה לחדר כושר, תסתובבי בו כעשר דקות ותסמני מה יש. אפשר לחזור לכאן ולעדכן בכל זמן.';
+  app.appendChild(p);
+
+  var list = document.createElement('div');
+  EQUIPMENT.forEach(function(eq){
+    var row = document.createElement('div');
+    row.className = 'equip-item' + (state.equipment[eq.id] ? ' checked' : '');
+    row.innerHTML =
+      '<div class="equip-icon">'+eq.icon+'</div>' +
+      '<div class="equip-body">' +
+        '<div class="equip-he">'+esc(eq.he)+'</div>' +
+        '<div class="equip-en"><bdi>'+esc(eq.en)+'</bdi></div>' +
+        '<div class="equip-desc">'+esc(eq.desc)+'</div>' +
+      '</div>' +
+      '<div class="equip-check">'+(state.equipment[eq.id] ? '✓' : '')+'</div>';
+    row.addEventListener('click', function(){
+      state.equipment[eq.id] = !state.equipment[eq.id];
+      saveState();
+      renderWalkthrough(fromSettings);
+    });
+    list.appendChild(row);
+  });
+  app.appendChild(list);
+
+  var noteLabel = document.createElement('div');
+  noteLabel.className = 'step-label';
+  noteLabel.textContent = 'יש עוד ציוד שאת רוצה לרשום?';
+  app.appendChild(noteLabel);
+  var note = document.createElement('textarea');
+  note.placeholder = 'לדוגמה: מכונת בטן, מדרגות...';
+  note.value = state.equipmentNote || '';
+  note.addEventListener('input', function(){
+    state.equipmentNote = note.value;
+    saveState();
+  });
+  app.appendChild(note);
+
+  var btn = document.createElement('button');
+  btn.className = 'btn btn-primary';
+  btn.textContent = fromSettings ? 'שמרתי, סיימתי' : 'סיימתי, בנו לי תוכנית';
+  btn.addEventListener('click', function(){
+    state.plan = generatePlan();
+    state.setupDone = true;
+    saveState();
+    if(fromSettings){ go('settings'); }
+    else{ go('home'); }
+  });
+  app.appendChild(btn);
+
+  if(fromSettings){
+    var back = backLink('settings');
+    app.appendChild(back);
+  }
+}
+
+/* ---------------------------------------------------------------------
+   HOME
+--------------------------------------------------------------------- */
+function dayNameForToday(){
+  if(!state.plan || !state.plan.days.length) return null;
+  var idx = 0;
+  if(state.log.length){
+    var lastDayId = state.log[state.log.length-1].dayId;
+    var lastIdx = state.plan.days.findIndex(function(d){ return d.id===lastDayId; });
+    if(lastIdx !== -1) idx = (lastIdx+1) % state.plan.days.length;
+  }
+  return state.plan.days[idx];
+}
+
+function renderHome(){
+  var greet = document.createElement('div');
+  greet.className = 'greet';
+  greet.textContent = 'היי, ' + state.profile.name;
+  app.appendChild(greet);
+
+  if(state.streak.current > 0){
+    var pill = document.createElement('div');
+    pill.className = 'streak-pill';
+    pill.textContent = '🔥 רצף של ' + state.streak.current + ' אימונים';
+    app.appendChild(pill);
+  }
+
+  var today = dayNameForToday();
+  var sub = document.createElement('div');
+  sub.className = 'subgreet';
+  sub.textContent = today ? ('היום: ' + today.nameHe) : 'עוד אין תוכנית - עדכני את הציוד בהגדרות';
+  app.appendChild(sub);
+
+  if(today){
+    var card = document.createElement('div');
+    card.className = 'day-card';
+    var h3 = document.createElement('h3');
+    h3.textContent = today.nameHe;
+    card.appendChild(h3);
+    today.blocks.forEach(function(b){
+      var ex = EXERCISE_BY_ID[b.exerciseId];
+      var row = document.createElement('div');
+      row.className = 'ex-row';
+      row.innerHTML = '<span>'+esc(ex.he)+'</span><span class="muted">'+b.sets+' × '+b.repRange[0]+'-'+b.repRange[1]+'</span>';
+      card.appendChild(row);
+    });
+    app.appendChild(card);
+  }
+
+  var cta = document.createElement('button');
+  cta.className = 'home-cta';
+  cta.textContent = 'התחל אימון';
+  cta.addEventListener('click', function(){
+    toast('מסך האימון בבנייה - זה השלב הבא 💪');
+  });
+  app.appendChild(cta);
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+
+  var links = document.createElement('div');
+  links.className = 'link-row';
+  var settingsLink = document.createElement('button');
+  settingsLink.className = 'btn btn-ghost';
+  settingsLink.textContent = 'הגדרות';
+  settingsLink.addEventListener('click', function(){ go('settings'); });
+  links.appendChild(settingsLink);
+  app.appendChild(links);
+}
+
+/* ---------------------------------------------------------------------
+   SETTINGS
+--------------------------------------------------------------------- */
+function renderSettings(){
+  var h = document.createElement('h1');
+  h.textContent = 'הגדרות';
+  app.appendChild(h);
+
+  var nameLabel = document.createElement('div');
+  nameLabel.className = 'step-label';
+  nameLabel.textContent = 'השם שלך';
+  app.appendChild(nameLabel);
+  var nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.value = state.profile.name;
+  nameInput.addEventListener('input', function(){
+    state.profile.name = nameInput.value;
+    saveState();
+  });
+  app.appendChild(nameInput);
+
+  var equipBtn = document.createElement('button');
+  equipBtn.className = 'btn';
+  equipBtn.textContent = 'עדכני את ציוד חדר הכושר';
+  equipBtn.addEventListener('click', function(){
+    renderWalkthrough(true);
+  });
+  app.appendChild(equipBtn);
+
+  if(state.disabledExercises.length){
+    var reenableBtn = document.createElement('button');
+    reenableBtn.className = 'btn';
+    reenableBtn.textContent = 'הפעילי מחדש תרגילים שהושבתו (' + state.disabledExercises.length + ')';
+    reenableBtn.addEventListener('click', function(){
+      state.disabledExercises = [];
+      state.plan = generatePlan();
+      saveState();
+      toast('כל התרגילים הופעלו מחדש');
+      render();
+    });
+    app.appendChild(reenableBtn);
+  }
+
+  var regenBtn = document.createElement('button');
+  regenBtn.className = 'btn';
+  regenBtn.textContent = 'בנו לי תוכנית חדשה';
+  regenBtn.addEventListener('click', function(){
+    state.plan = generatePlan();
+    saveState();
+    toast('תוכנית חדשה נבנתה');
+  });
+  app.appendChild(regenBtn);
+
+  var exportBtn = document.createElement('button');
+  exportBtn.className = 'btn';
+  exportBtn.textContent = 'ייצוא נתונים (העתקה ללוח)';
+  exportBtn.addEventListener('click', function(){
+    var json = JSON.stringify(state, null, 2);
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(json).then(function(){
+        toast('הועתק ללוח');
+      }).catch(function(){
+        toast('לא הצלחתי להעתיק');
+      });
+    }else{
+      toast('העתקה אוטומטית לא נתמכת בדפדפן הזה');
+    }
+  });
+  app.appendChild(exportBtn);
+
+  var resetBtn = document.createElement('button');
+  resetBtn.className = 'btn btn-danger';
+  resetBtn.textContent = 'איפוס - מחיקת כל הנתונים';
+  resetBtn.addEventListener('click', function(){
+    if(confirm('לאפס את כל הנתונים? אי אפשר לבטל את זה.')){
+      localStorage.removeItem(STORAGE_KEY);
+      state = defaultState();
+      render();
+    }
+  });
+  app.appendChild(resetBtn);
+
+  var box = document.createElement('div');
+  box.className = 'disclaimer-box';
+  box.innerHTML = disclaimerHTML();
+  app.appendChild(box);
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+  app.appendChild(backLink('home'));
+}
+
+/* ---------------------------------------------------------------------
+   INIT
+--------------------------------------------------------------------- */
+render();
+</script>
+</body>
+</html>
