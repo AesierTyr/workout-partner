@@ -244,6 +244,17 @@
   .rest-seconds{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:800;}
   .rest-next{font-size:17px;color:var(--muted);text-align:center;}
 
+  .headphone-hint{
+    background:#fdf1ec;border:1px solid var(--border);border-radius:12px;
+    padding:10px 12px;font-size:14px;color:var(--text);margin-bottom:12px;text-align:center;
+  }
+  .toggle-row{display:flex;justify-content:space-between;align-items:center;text-align:right;}
+  .toggle-row.toggle-on{border-color:var(--accent);}
+  .toggle-state{font-weight:700;color:var(--muted);}
+  .toggle-row.toggle-on .toggle-state{color:var(--accent);}
+  .rate-row{display:flex;gap:10px;margin-bottom:10px;}
+  .rate-row .option-btn{margin-bottom:0;text-align:center;}
+
   .always-sub-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:15px;color:var(--muted);}
 
   .pr-box{background:var(--ok-bg);border:1px solid #cfe0c4;border-radius:14px;padding:16px;margin-bottom:16px;color:#3c5a30;}
@@ -272,6 +283,8 @@ function defaultState(){
       focusAreas:[],
       voiceEnabled:true,
       voiceRate:1,
+      repCounting:false,
+      voiceUnavailableWarned:false,
       localLangNames:false
     },
     equipment:{},
@@ -1286,6 +1299,59 @@ function renderSettings(){
   });
   app.appendChild(regenBtn);
 
+  var voiceHeading = document.createElement('h2');
+  voiceHeading.textContent = 'קול';
+  app.appendChild(voiceHeading);
+
+  var voiceToggle = document.createElement('button');
+  voiceToggle.className = 'btn toggle-row' + (state.profile.voiceEnabled ? ' toggle-on' : '');
+  voiceToggle.innerHTML = '<span>קריינות קולית</span><span class="toggle-state">'+(state.profile.voiceEnabled?'מופעלת':'כבויה')+'</span>';
+  voiceToggle.addEventListener('click', function(){
+    state.profile.voiceEnabled = !state.profile.voiceEnabled;
+    saveState();
+    render();
+  });
+  app.appendChild(voiceToggle);
+
+  if(!VOICE_STATE.checked || VOICE_STATE.available){
+    var rateLabel = document.createElement('div');
+    rateLabel.className = 'step-label';
+    rateLabel.textContent = 'מהירות דיבור';
+    app.appendChild(rateLabel);
+    var rateRow = document.createElement('div');
+    rateRow.className = 'rate-row';
+    [['איטי',0.85],['רגיל',1],['מהיר',1.15]].forEach(function(pair){
+      var b = document.createElement('button');
+      b.className = 'option-btn' + (Math.abs(state.profile.voiceRate-pair[1])<0.01 ? ' selected' : '');
+      b.innerHTML = '<span class="opt-title">'+pair[0]+'</span>';
+      b.addEventListener('click', function(){
+        state.profile.voiceRate = pair[1];
+        saveState();
+        render();
+      });
+      rateRow.appendChild(b);
+    });
+    app.appendChild(rateRow);
+
+    var repCountToggle = document.createElement('button');
+    repCountToggle.className = 'btn toggle-row' + (state.profile.repCounting ? ' toggle-on' : '');
+    repCountToggle.innerHTML = '<span>ספירת חזרות בקול</span><span class="toggle-state">'+(state.profile.repCounting?'מופעלת':'כבויה')+'</span>';
+    repCountToggle.addEventListener('click', function(){
+      state.profile.repCounting = !state.profile.repCounting;
+      saveState();
+      render();
+    });
+    app.appendChild(repCountToggle);
+  }
+
+  if(VOICE_STATE.checked && !VOICE_STATE.available){
+    var voiceNote = document.createElement('p');
+    voiceNote.className = 'muted';
+    voiceNote.style.fontSize = '14px';
+    voiceNote.textContent = 'לא נמצא קול עברי מותקן במכשיר. הגדרות ← מערכת ← שפות וקלט ← פלט המרת טקסט לדיבור ← Google TTS ← התקנת נתוני קול ← עברית.';
+    app.appendChild(voiceNote);
+  }
+
   var exportBtn = document.createElement('button');
   exportBtn.className = 'btn';
   exportBtn.textContent = 'ייצוא נתונים (העתקה ללוח)';
@@ -1397,8 +1463,174 @@ function releaseWakeLock(){
 document.addEventListener('visibilitychange', function(){
   if(state.activeSession && document.visibilityState === 'visible'){
     requestWakeLock();
+    if('speechSynthesis' in window && window.speechSynthesis.paused){
+      window.speechSynthesis.resume();
+    }
   }
 });
+
+/* ---------------------------------------------------------------------
+   VOICE COACH (§6) - Chrome/Android Google TTS is the target. Never fall
+   back to an English voice mangling Hebrew text, and never trust a
+   network-only voice since it would go silent in airplane mode.
+--------------------------------------------------------------------- */
+var VOICE_STATE = {voice:null, available:false, checked:false};
+
+function pickHebrewVoice(){
+  if(!('speechSynthesis' in window)) return null;
+  var voices = window.speechSynthesis.getVoices();
+  var heLocal = voices.filter(function(v){
+    return v.lang && v.lang.toLowerCase().indexOf('he') === 0 && v.localService === true;
+  });
+  return heLocal[0] || null;
+}
+
+function finalizeVoiceDetection(){
+  if(VOICE_STATE.checked) return;
+  VOICE_STATE.checked = true;
+  VOICE_STATE.voice = pickHebrewVoice();
+  VOICE_STATE.available = !!VOICE_STATE.voice;
+}
+
+function initVoice(){
+  if(!('speechSynthesis' in window)){
+    VOICE_STATE.checked = true;
+    return;
+  }
+  var voices = window.speechSynthesis.getVoices();
+  if(voices.length){
+    finalizeVoiceDetection();
+  }else{
+    window.speechSynthesis.addEventListener('voiceschanged', function onChange(){
+      window.speechSynthesis.removeEventListener('voiceschanged', onChange);
+      finalizeVoiceDetection();
+    });
+    // Some browsers cache voices without ever firing voiceschanged.
+    setTimeout(finalizeVoiceDetection, 1500);
+  }
+}
+
+var repCountTimeouts = [];
+function clearRepCounting(){
+  repCountTimeouts.forEach(function(id){ clearTimeout(id); });
+  repCountTimeouts = [];
+}
+
+function speak(text){
+  clearRepCounting();
+  if(!state.profile.voiceEnabled || !VOICE_STATE.available || !VOICE_STATE.voice) return;
+  try{
+    window.speechSynthesis.cancel(); // never let cues stack
+    var utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'he-IL';
+    utter.voice = VOICE_STATE.voice;
+    utter.rate = state.profile.voiceRate || 1;
+    window.speechSynthesis.speak(utter);
+  }catch(e){}
+}
+
+var HEBREW_COUNT_WORDS = ['אחת','שתיים','שלוש','ארבע','חמש','שש','שבע','שמונה','תשע','עשר','אחת עשרה','שתים עשרה','שלוש עשרה','ארבע עשרה','חמש עשרה','שש עשרה','שבע עשרה','שמונה עשרה','תשע עשרה','עשרים'];
+function startRepCounting(targetReps){
+  if(!state.profile.repCounting || !state.profile.voiceEnabled || !VOICE_STATE.available) return;
+  clearRepCounting();
+  for(var i=0; i<targetReps && i<HEBREW_COUNT_WORDS.length; i++){
+    (function(word, delay){
+      var id = setTimeout(function(){
+        if(!state.profile.voiceEnabled || !VOICE_STATE.available) return;
+        try{
+          window.speechSynthesis.cancel();
+          var utter = new SpeechSynthesisUtterance(word);
+          utter.lang = 'he-IL';
+          utter.voice = VOICE_STATE.voice;
+          utter.rate = state.profile.voiceRate || 1;
+          window.speechSynthesis.speak(utter);
+        }catch(e){}
+      }, delay);
+      repCountTimeouts.push(id);
+    })(HEBREW_COUNT_WORDS[i], (i+1)*1500);
+  }
+}
+
+var audioCtx = null;
+function getAudioCtx(){
+  if(!audioCtx){
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return null;
+    try{ audioCtx = new Ctx(); }catch(e){ return null; }
+  }
+  return audioCtx;
+}
+
+function beep(freq, durMs){
+  var ctx = getAudioCtx();
+  if(!ctx) return;
+  try{
+    if(ctx.state === 'suspended') ctx.resume();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.frequency.value = freq || 880;
+    gain.gain.value = 0.15;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + (durMs||150)/1000);
+  }catch(e){}
+}
+
+var ENCOURAGEMENT_LINES = [
+  'יפה מאוד, ממשיכות הלאה.',
+  'את עושה את זה נהדר.',
+  'כל הכבוד, בואי נמשיך.',
+  'את בקצב מצוין.',
+  'נשמע טוב, בואי נתקדם.',
+  'יופי של עבודה עד עכשיו.',
+  'ממשיכות חזק.',
+  'זה הולך טוב, קדימה הלאה.',
+  'שנייה לנשום, ואז ממשיכות.',
+  'את שם, אל תעצרי עכשיו.',
+  'עוד תרגיל אחד קרוב.',
+  'צעד נוסף קדימה.',
+  'אני איתך, בואי נמשיך.',
+  'יש לך את זה, הלאה.',
+  'מתקדמות יפה, בואי נמשיך.',
+  'עוד קצת וסיימנו את הבלוק הזה.'
+];
+function randomEncouragement(){
+  return ENCOURAGEMENT_LINES[Math.floor(Math.random()*ENCOURAGEMENT_LINES.length)];
+}
+
+var SESSION_CLOSING_LINES = [
+  'היה כיף להתאמן איתך היום.',
+  'זהו, סיימנו. את חזקה יותר ממה שאת חושבת.',
+  'אימון טוב. תנוחי טוב.',
+  'עוד אימון מאחורייך. תמשיכי ככה.',
+  'סיימת חזק. נתראה באימון הבא.'
+];
+
+function buildSessionStartText(day){
+  return state.profile.name + ', היי! היום ' + day.nameHe + '. האימון אמור לקחת בערך ' + state.profile.sessionMinutes + ' דקות.';
+}
+
+function buildNewExerciseText(item, ex, isFirstInSession){
+  var lines = [];
+  if(!isFirstInSession){
+    lines.push(randomEncouragement());
+  }
+  lines.push(ex.he + '.');
+  if(item.kind === 'main'){
+    var lastW = lastWeightFor(item.exerciseId);
+    lines.push(lastW===null ? 'פעם ראשונה בתרגיל הזה - תתחילי במשקל הכי קל שיש.' : ('פעם שעברה עשית ' + lastW + ' קילו.'));
+    lines.push(ex.cues.join('. ') + '.');
+    lines.push(item.sets + ' סטים, ' + item.repRange[0] + ' עד ' + item.repRange[1] + ' חזרות.');
+  }
+  lines.push('קדימה.');
+  return lines.join(' ');
+}
+
+function buildSessionEndText(summary){
+  var closing = SESSION_CLOSING_LINES[Math.floor(Math.random()*SESSION_CLOSING_LINES.length)];
+  return 'סיימנו! ' + summary.totalMinutes + ' דקות אימון, נפח כולל של ' + summary.totalVolume + ' קילו. ' + closing;
+}
 
 /* ---------------------------------------------------------------------
    SESSION RUNNER - data helpers
@@ -1460,23 +1692,38 @@ function startSession(){
     toast('אין כרגע תרגילים זמינים - בדקי את הציוד בהגדרות');
     return;
   }
+  var needsVoiceNotice = state.profile.voiceEnabled && VOICE_STATE.checked &&
+    !VOICE_STATE.available && !state.profile.voiceUnavailableWarned;
   state.activeSession = {
     dayId: day.id,
     startedAt: new Date().toISOString(),
     exercises: flattened,
     currentIndex: 0,
     setLogs: {},
-    phase: 'exercise',
+    phase: needsVoiceNotice ? 'voice_notice' : 'exercise',
     pendingReps: 0,
     pendingWeight: 0,
     restEndAt: null,
     restDurationSec: 0,
+    lastAnnouncedSecond: null,
     finalized: false,
     summary: null
   };
   saveState();
   requestWakeLock();
   go('session');
+  if(!needsVoiceNotice){
+    var first = state.activeSession.exercises[0];
+    speak(buildSessionStartText(day) + ' ' + buildNewExerciseText(first, EXERCISE_BY_ID[first.exerciseId], true));
+    if(first.kind === 'main') startRepCounting(first.repRange[1]);
+  }
+}
+
+function dismissVoiceNotice(){
+  state.profile.voiceUnavailableWarned = true;
+  state.activeSession.phase = 'exercise';
+  saveState();
+  render();
 }
 
 function currentSessionItem(){
@@ -1489,11 +1736,17 @@ function advanceExercise(){
   if(s.currentIndex >= s.exercises.length){
     finalizeSessionData();
     s.phase = 'summary';
+    saveState();
+    render();
+    speak(buildSessionEndText(s.summary));
   }else{
     s.phase = 'exercise';
+    saveState();
+    render();
+    var item = s.exercises[s.currentIndex];
+    speak(buildNewExerciseText(item, EXERCISE_BY_ID[item.exerciseId], false));
+    if(item.kind === 'main') startRepCounting(item.repRange[1]);
   }
-  saveState();
-  render();
 }
 
 function enterLogging(){
@@ -1509,18 +1762,26 @@ function enterLogging(){
 function submitSet(feel){
   var s = state.activeSession;
   var idx = s.currentIndex;
+  var item = currentSessionItem();
+  var prevBest = personalBestFor(item.exerciseId);
+  var isPR = prevBest !== null && s.pendingWeight > prevBest;
   if(!s.setLogs[idx]) s.setLogs[idx] = [];
   s.setLogs[idx].push({weight:s.pendingWeight, reps:s.pendingReps, feel:feel});
-  startRest(currentSessionItem().restSec);
+  startRest(item.restSec, isPR);
 }
 
-function startRest(sec){
+function startRest(sec, isPR){
   var s = state.activeSession;
   s.phase = 'resting';
   s.restDurationSec = sec;
   s.restEndAt = new Date(Date.now() + sec*1000).toISOString();
+  s.lastAnnouncedSecond = null;
   saveState();
   render();
+  var lines = [];
+  if(isPR) lines.push('שיא אישי! זה משקל שיא שברת בתרגיל הזה.');
+  lines.push('יפה. ' + sec + ' שניות מנוחה.');
+  speak(lines.join(' '));
 }
 
 function finishRest(){
@@ -1531,6 +1792,8 @@ function finishRest(){
     s.phase = 'exercise';
     saveState();
     render();
+    speak('סט הבא. קדימה.');
+    startRepCounting(item.repRange[1]);
   }else{
     advanceExercise();
   }
@@ -1571,6 +1834,8 @@ function chooseSubstitute(cand, always){
   s.phase = 'exercise';
   saveState();
   render();
+  speak(buildNewExerciseText(item, cand, false));
+  if(item.kind === 'main') startRepCounting(item.repRange[1]);
 }
 
 function confirmPain(){
@@ -1638,6 +1903,7 @@ function renderSession(){
   var s = state.activeSession;
   if(!s){ go('home'); return; }
   switch(s.phase){
+    case 'voice_notice': renderSessionVoiceNotice(); break;
     case 'exercise': renderSessionExercise(); break;
     case 'logging': renderSessionLogging(); break;
     case 'resting': renderSessionResting(); break;
@@ -1646,6 +1912,29 @@ function renderSession(){
     case 'summary': renderSessionSummary(); break;
     default: renderSessionExercise();
   }
+}
+
+function renderSessionVoiceNotice(){
+  var h = document.createElement('h1');
+  h.textContent = 'לא מצאנו קול עברי';
+  app.appendChild(h);
+
+  var box = document.createElement('div');
+  box.className = 'disclaimer-box';
+  box.innerHTML = '<b>האימון ימשיך בלי קריינות קולית</b>' +
+    'כדי להוסיף קול עברי למכשיר: הגדרות ← מערכת ← שפות וקלט ← פלט המרת טקסט לדיבור ← Google TTS ← התקנת נתוני קול ← עברית. ' +
+    'בינתיים נשתמש בהוראות גדולות על המסך ובצלילים בזמן המנוחה.';
+  app.appendChild(box);
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+
+  var btn = document.createElement('button');
+  btn.className = 'btn btn-primary';
+  btn.textContent = 'הבנתי, בואי נתחיל';
+  btn.addEventListener('click', dismissVoiceNotice);
+  app.appendChild(btn);
 }
 
 function sessionProgressLabel(){
@@ -1689,6 +1978,13 @@ function renderSessionExercise(){
   var s = state.activeSession;
   var item = currentSessionItem();
   var ex = EXERCISE_BY_ID[item.exerciseId];
+
+  if(s.currentIndex === 0 && state.profile.voiceEnabled && VOICE_STATE.available){
+    var hp = document.createElement('div');
+    hp.className = 'headphone-hint';
+    hp.textContent = '🎧 באוזניות זה יהיה נעים יותר בחדר כושר ציבורי';
+    app.appendChild(hp);
+  }
 
   var progress = document.createElement('div');
   progress.className = 'step-label';
@@ -1896,6 +2192,16 @@ function renderSessionResting(){
     var frac = s2.restDurationSec>0 ? Math.min(1, Math.max(0, left/s2.restDurationSec)) : 0;
     fg.style.strokeDashoffset = String(circumference*(1-frac));
 
+    if(left <= 3 && left >= 1 && s2.lastAnnouncedSecond !== left){
+      s2.lastAnnouncedSecond = left;
+      var COUNT_WORDS = {3:'שלוש', 2:'שתיים', 1:'אחת'};
+      if(state.profile.voiceEnabled && VOICE_STATE.available){
+        speak(COUNT_WORDS[left]);
+      }else{
+        beep(left===1 ? 1200 : 880, 130);
+      }
+    }
+
     var curLogs = (s2.setLogs[s2.currentIndex]||[]).length;
     var cur = s2.exercises[s2.currentIndex];
     if(cur.kind==='main' && curLogs < cur.sets){
@@ -2039,6 +2345,7 @@ function renderSessionSummary(){
 /* ---------------------------------------------------------------------
    INIT
 --------------------------------------------------------------------- */
+initVoice();
 render();
 </script>
 </body>
