@@ -209,6 +209,46 @@
   .muted{color:var(--muted);}
   bdi{unicode-bidi:isolate;}
   .checkbox-note{font-size:13px;color:var(--muted);margin:-4px 0 16px;}
+
+  /* Session runner */
+  .ex-name{font-size:34px;font-weight:800;margin:4px 0 2px;line-height:1.2;}
+  .ex-en{font-size:15px;color:var(--muted);margin-bottom:14px;}
+  .ex-svg{width:100%;max-width:280px;margin:0 auto 16px;color:var(--accent);}
+  .ex-svg svg{width:100%;height:auto;display:block;}
+  .ex-target{font-size:19px;font-weight:700;margin-bottom:4px;}
+  .ex-set-label{font-size:15px;color:var(--muted);margin-bottom:10px;}
+  .ex-weight-hint{font-size:15px;color:var(--text);background:#fdf1ec;border-radius:10px;padding:10px 12px;margin-bottom:14px;}
+  .ex-cues{margin:0 0 16px;padding-inline-start:20px;font-size:16px;line-height:1.6;}
+  .ex-cues li{margin-bottom:6px;}
+  .session-btn-row{display:flex;gap:10px;}
+  .session-btn-row .btn{flex:1;}
+
+  .stepper-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+  .stepper-label{font-size:17px;font-weight:600;}
+  .stepper-controls{display:flex;align-items:center;gap:14px;}
+  .stepper-btn{
+    width:48px;height:48px;border-radius:50%;
+    border:2px solid var(--border);background:var(--surface);
+    font-size:24px;font-weight:700;color:var(--accent);cursor:pointer;
+  }
+  .stepper-value{min-width:56px;text-align:center;font-size:22px;font-weight:800;}
+
+  .feel-row{display:flex;gap:10px;margin-bottom:16px;}
+  .feel-btn{flex:1;}
+
+  .rest-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:20px 0;}
+  .rest-ring-wrap{position:relative;width:240px;height:240px;margin-bottom:20px;}
+  .rest-ring-svg{width:100%;height:100%;transform:rotate(-90deg);}
+  .rest-ring-bg{fill:none;stroke:var(--border);stroke-width:14;}
+  .rest-ring-fg{fill:none;stroke:var(--accent);stroke-width:14;stroke-linecap:round;transition:stroke-dashoffset 1s linear;}
+  .rest-seconds{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:800;}
+  .rest-next{font-size:17px;color:var(--muted);text-align:center;}
+
+  .always-sub-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:15px;color:var(--muted);}
+
+  .pr-box{background:var(--ok-bg);border:1px solid #cfe0c4;border-radius:14px;padding:16px;margin-bottom:16px;color:#3c5a30;}
+  .pr-box b{display:block;margin-bottom:6px;font-size:16px;}
+
   @media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important;}}
 </style>
 </head>
@@ -242,6 +282,7 @@ function defaultState(){
     streak:{current:0,lastSessionDate:null},
     localNames:{},
     setupDone:false,
+    activeSession:null,
     ui:{screen:'setup_name'}
   };
 }
@@ -261,6 +302,7 @@ function loadState(){
     parsed.streak = parsed.streak || d.streak;
     parsed.localNames = parsed.localNames || {};
     parsed.setupDone = !!parsed.setupDone;
+    parsed.activeSession = parsed.activeSession || null;
     parsed.ui = parsed.ui || {screen: parsed.setupDone ? 'home' : 'setup_name'};
     return parsed;
   }catch(e){
@@ -853,6 +895,7 @@ function esc(s){
 
 function render(){
   var screen = state.ui.screen;
+  clearRestTicker();
   app.innerHTML = '';
   switch(screen){
     case 'setup_name': renderSetupName(); break;
@@ -863,6 +906,7 @@ function render(){
     case 'walkthrough': renderWalkthrough(); break;
     case 'home': renderHome(); break;
     case 'settings': renderSettings(); break;
+    case 'session': renderSession(); break;
     default: renderHome();
   }
 }
@@ -1169,8 +1213,9 @@ function renderHome(){
   var cta = document.createElement('button');
   cta.className = 'home-cta';
   cta.textContent = 'התחל אימון';
+  cta.disabled = !today;
   cta.addEventListener('click', function(){
-    toast('מסך האימון בבנייה - זה השלב הבא 💪');
+    startSession();
   });
   app.appendChild(cta);
 
@@ -1279,6 +1324,716 @@ function renderSettings(){
   spacer.className = 'spacer';
   app.appendChild(spacer);
   app.appendChild(backLink('home'));
+}
+
+/* ---------------------------------------------------------------------
+   WAKE LOCK - keep the screen on during a session (§5.4, §11)
+--------------------------------------------------------------------- */
+var wakeLockSentinel = null;
+var silentAudioEl = null;
+var wakeLockWarned = false;
+
+function createSilentAudioURL(durationSec){
+  var sampleRate = 8000;
+  var numSamples = sampleRate * durationSec;
+  var buffer = new ArrayBuffer(44 + numSamples*2);
+  var view = new DataView(buffer);
+  function writeString(offset, str){
+    for(var i=0;i<str.length;i++) view.setUint8(offset+i, str.charCodeAt(i));
+  }
+  writeString(0,'RIFF'); view.setUint32(4, 36+numSamples*2, true); writeString(8,'WAVE');
+  writeString(12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true); view.setUint16(22,1,true);
+  view.setUint32(24,sampleRate,true); view.setUint32(28,sampleRate*2,true); view.setUint16(32,2,true); view.setUint16(34,16,true);
+  writeString(36,'data'); view.setUint32(40,numSamples*2,true);
+  var blob = new Blob([buffer], {type:'audio/wav'});
+  return URL.createObjectURL(blob);
+}
+
+function startSilentAudioFallback(){
+  if(silentAudioEl) return;
+  try{
+    silentAudioEl = document.createElement('audio');
+    silentAudioEl.src = createSilentAudioURL(2);
+    silentAudioEl.loop = true;
+    silentAudioEl.setAttribute('playsinline', '');
+    silentAudioEl.style.display = 'none';
+    document.body.appendChild(silentAudioEl);
+    silentAudioEl.play().catch(function(){});
+  }catch(e){}
+  if(!wakeLockWarned){
+    wakeLockWarned = true;
+    toast('כדאי להגדיל את זמן נעילת המסך האוטומטית בהגדרות הטלפון לזמן האימון');
+  }
+}
+
+function stopSilentAudioFallback(){
+  if(silentAudioEl){
+    silentAudioEl.pause();
+    silentAudioEl.remove();
+    silentAudioEl = null;
+  }
+}
+
+function requestWakeLock(){
+  if('wakeLock' in navigator){
+    navigator.wakeLock.request('screen').then(function(sentinel){
+      wakeLockSentinel = sentinel;
+    }).catch(function(){
+      startSilentAudioFallback();
+    });
+  }else{
+    startSilentAudioFallback();
+  }
+}
+
+function releaseWakeLock(){
+  if(wakeLockSentinel){
+    wakeLockSentinel.release().catch(function(){});
+    wakeLockSentinel = null;
+  }
+  stopSilentAudioFallback();
+}
+
+document.addEventListener('visibilitychange', function(){
+  if(state.activeSession && document.visibilityState === 'visible'){
+    requestWakeLock();
+  }
+});
+
+/* ---------------------------------------------------------------------
+   SESSION RUNNER - data helpers
+--------------------------------------------------------------------- */
+function flattenDayExercises(day){
+  var list = [];
+  (day.warmup||[]).forEach(function(b,i){
+    list.push({exerciseId:b.exerciseId, sets:b.sets, repRange:b.repRange.slice(), restSec:b.restSec, kind:'warmup', srcArray:'warmup', srcIndex:i});
+  });
+  (day.blocks||[]).forEach(function(b,i){
+    list.push({exerciseId:b.exerciseId, sets:b.sets, repRange:b.repRange.slice(), restSec:b.restSec, kind:'main', srcArray:'blocks', srcIndex:i});
+  });
+  (day.cooldown||[]).forEach(function(b,i){
+    list.push({exerciseId:b.exerciseId, sets:b.sets, repRange:b.repRange.slice(), restSec:b.restSec, kind:'cooldown', srcArray:'cooldown', srcIndex:i});
+  });
+  return list;
+}
+
+function weightIncrement(ex){
+  return ex.equipment.indexOf('dumbbells') !== -1 ? 1 : 2.5;
+}
+
+function lastWeightFor(exerciseId){
+  for(var i=state.log.length-1; i>=0; i--){
+    var entry = state.log[i];
+    if(entry.exerciseId === exerciseId && entry.sets && entry.sets.length){
+      return entry.sets.reduce(function(m,s){ return Math.max(m, s.weight||0); }, 0);
+    }
+  }
+  return null;
+}
+
+function personalBestFor(exerciseId){
+  var best = null;
+  state.log.forEach(function(entry){
+    if(entry.exerciseId !== exerciseId || !entry.sets) return;
+    entry.sets.forEach(function(s){
+      if(s.weight!=null && (best===null || s.weight>best)) best = s.weight;
+    });
+  });
+  return best;
+}
+
+function formatMMSS(totalSeconds){
+  var s = Math.max(0, Math.round(totalSeconds));
+  var m = Math.floor(s/60);
+  var r = s%60;
+  return m + ':' + (r<10?'0':'') + r;
+}
+
+/* ---------------------------------------------------------------------
+   SESSION RUNNER - lifecycle
+--------------------------------------------------------------------- */
+function startSession(){
+  var day = dayNameForToday();
+  if(!day) return;
+  var flattened = flattenDayExercises(day);
+  if(!flattened.length){
+    toast('אין כרגע תרגילים זמינים - בדקי את הציוד בהגדרות');
+    return;
+  }
+  state.activeSession = {
+    dayId: day.id,
+    startedAt: new Date().toISOString(),
+    exercises: flattened,
+    currentIndex: 0,
+    setLogs: {},
+    phase: 'exercise',
+    pendingReps: 0,
+    pendingWeight: 0,
+    restEndAt: null,
+    restDurationSec: 0,
+    finalized: false,
+    summary: null
+  };
+  saveState();
+  requestWakeLock();
+  go('session');
+}
+
+function currentSessionItem(){
+  return state.activeSession.exercises[state.activeSession.currentIndex];
+}
+
+function advanceExercise(){
+  var s = state.activeSession;
+  s.currentIndex++;
+  if(s.currentIndex >= s.exercises.length){
+    finalizeSessionData();
+    s.phase = 'summary';
+  }else{
+    s.phase = 'exercise';
+  }
+  saveState();
+  render();
+}
+
+function enterLogging(){
+  var s = state.activeSession;
+  var item = currentSessionItem();
+  s.pendingReps = item.repRange[1];
+  s.pendingWeight = lastWeightFor(item.exerciseId) || 0;
+  s.phase = 'logging';
+  saveState();
+  render();
+}
+
+function submitSet(feel){
+  var s = state.activeSession;
+  var idx = s.currentIndex;
+  if(!s.setLogs[idx]) s.setLogs[idx] = [];
+  s.setLogs[idx].push({weight:s.pendingWeight, reps:s.pendingReps, feel:feel});
+  startRest(currentSessionItem().restSec);
+}
+
+function startRest(sec){
+  var s = state.activeSession;
+  s.phase = 'resting';
+  s.restDurationSec = sec;
+  s.restEndAt = new Date(Date.now() + sec*1000).toISOString();
+  saveState();
+  render();
+}
+
+function finishRest(){
+  var s = state.activeSession;
+  var item = currentSessionItem();
+  var logsForCur = s.setLogs[s.currentIndex] || [];
+  if(item.kind === 'main' && logsForCur.length < item.sets){
+    s.phase = 'exercise';
+    saveState();
+    render();
+  }else{
+    advanceExercise();
+  }
+}
+
+function skipExercise(){
+  advanceExercise();
+}
+
+function substituteCandidates(item){
+  var ex = EXERCISE_BY_ID[item.exerciseId];
+  var subs = (ex && ex.substitutes) || [];
+  var out = [];
+  subs.forEach(function(id){
+    var cand = EXERCISE_BY_ID[id];
+    if(!cand) return;
+    if(state.disabledExercises.indexOf(id) !== -1) return;
+    if(!hasEquipmentFor(cand)) return;
+    out.push(cand);
+  });
+  return out.slice(0,3);
+}
+
+function chooseSubstitute(cand, always){
+  var s = state.activeSession;
+  var item = currentSessionItem();
+  item.exerciseId = cand.id;
+  item.repRange = cand.repRange.slice();
+  item.restSec = cand.restSec;
+  if(always && state.plan){
+    var day = state.plan.days.filter(function(d){ return d.id === s.dayId; })[0];
+    if(day && day[item.srcArray] && day[item.srcArray][item.srcIndex]){
+      day[item.srcArray][item.srcIndex].exerciseId = cand.id;
+      day[item.srcArray][item.srcIndex].repRange = cand.repRange.slice();
+      day[item.srcArray][item.srcIndex].restSec = cand.restSec;
+    }
+  }
+  s.phase = 'exercise';
+  saveState();
+  render();
+}
+
+function confirmPain(){
+  var s = state.activeSession;
+  var idx = s.currentIndex;
+  var item = currentSessionItem();
+  var setsLogged = s.setLogs[idx] || [];
+  state.log.push({date:s.startedAt, dayId:s.dayId, exerciseId:item.exerciseId, sets:setsLogged, painFlag:true});
+  if(state.disabledExercises.indexOf(item.exerciseId) === -1){
+    state.disabledExercises.push(item.exerciseId);
+  }
+  item.painReported = true;
+  state.plan = generatePlan();
+  saveState();
+  toast('התרגיל הוסר מהתוכניות הבאות - אפשר להפעיל אותו מחדש בהגדרות');
+  advanceExercise();
+}
+
+function finalizeSessionData(){
+  var s = state.activeSession;
+  if(s.finalized) return;
+  var newEntries = [];
+  var prNames = [];
+  s.exercises.forEach(function(item, idx){
+    if(item.kind !== 'main' || item.painReported) return;
+    var setsLogged = s.setLogs[idx];
+    if(!setsLogged || !setsLogged.length) return;
+    var prevBest = personalBestFor(item.exerciseId);
+    var maxThisSession = setsLogged.reduce(function(m,x){ return Math.max(m, x.weight||0); }, 0);
+    if(prevBest === null || maxThisSession > prevBest){
+      prNames.push(EXERCISE_BY_ID[item.exerciseId].he);
+    }
+    newEntries.push({date:s.startedAt, dayId:s.dayId, exerciseId:item.exerciseId, sets:setsLogged, painFlag:false});
+  });
+  newEntries.forEach(function(e){ state.log.push(e); });
+  state.streak.current = (state.streak.current||0) + 1;
+  state.streak.lastSessionDate = s.startedAt;
+  var totalMinutes = Math.max(1, Math.round((Date.now() - new Date(s.startedAt).getTime())/60000));
+  var totalVolume = newEntries.reduce(function(sum,e){
+    return sum + e.sets.reduce(function(s2,st){ return s2 + (st.weight||0)*(st.reps||0); }, 0);
+  }, 0);
+  s.summary = {totalMinutes:totalMinutes, totalVolume:Math.round(totalVolume), prNames:prNames};
+  s.finalized = true;
+  saveState();
+}
+
+function endSession(){
+  releaseWakeLock();
+  state.activeSession = null;
+  go('home');
+}
+
+/* ---------------------------------------------------------------------
+   SESSION RUNNER - rendering
+--------------------------------------------------------------------- */
+var restIntervalHandle = null;
+function clearRestTicker(){
+  if(restIntervalHandle){
+    clearInterval(restIntervalHandle);
+    restIntervalHandle = null;
+  }
+}
+
+function renderSession(){
+  var s = state.activeSession;
+  if(!s){ go('home'); return; }
+  switch(s.phase){
+    case 'exercise': renderSessionExercise(); break;
+    case 'logging': renderSessionLogging(); break;
+    case 'resting': renderSessionResting(); break;
+    case 'substitute': renderSessionSubstitute(); break;
+    case 'pain_confirm': renderSessionPainConfirm(); break;
+    case 'summary': renderSessionSummary(); break;
+    default: renderSessionExercise();
+  }
+}
+
+function sessionProgressLabel(){
+  var s = state.activeSession;
+  return 'תרגיל ' + (s.currentIndex+1) + ' מתוך ' + s.exercises.length;
+}
+
+function stepperRow(label, value, onDelta, isWeight){
+  var wrap = document.createElement('div');
+  wrap.className = 'stepper-row';
+  var lbl = document.createElement('div');
+  lbl.className = 'stepper-label';
+  lbl.textContent = label;
+  wrap.appendChild(lbl);
+
+  var controls = document.createElement('div');
+  controls.className = 'stepper-controls';
+  var minusBtn = document.createElement('button');
+  minusBtn.className = 'stepper-btn';
+  minusBtn.textContent = '−';
+  minusBtn.addEventListener('click', function(){ onDelta(-1); });
+  var valEl = document.createElement('div');
+  valEl.className = 'stepper-value';
+  if(isWeight){
+    valEl.innerHTML = '<bdi>' + (value % 1 === 0 ? value : value.toFixed(1)) + '</bdi>';
+  }else{
+    valEl.textContent = String(value);
+  }
+  var plusBtn = document.createElement('button');
+  plusBtn.className = 'stepper-btn';
+  plusBtn.textContent = '+';
+  plusBtn.addEventListener('click', function(){ onDelta(1); });
+  controls.appendChild(minusBtn);
+  controls.appendChild(valEl);
+  controls.appendChild(plusBtn);
+  wrap.appendChild(controls);
+  return wrap;
+}
+
+function renderSessionExercise(){
+  var s = state.activeSession;
+  var item = currentSessionItem();
+  var ex = EXERCISE_BY_ID[item.exerciseId];
+
+  var progress = document.createElement('div');
+  progress.className = 'step-label';
+  progress.textContent = sessionProgressLabel();
+  app.appendChild(progress);
+
+  var name = document.createElement('div');
+  name.className = 'ex-name';
+  name.textContent = ex.he;
+  app.appendChild(name);
+
+  var enName = document.createElement('div');
+  enName.className = 'ex-en';
+  enName.innerHTML = '<bdi>' + esc(ex.en) + '</bdi>';
+  app.appendChild(enName);
+
+  var svgWrap = document.createElement('div');
+  svgWrap.className = 'ex-svg';
+  svgWrap.innerHTML = ex.svg;
+  app.appendChild(svgWrap);
+
+  if(item.kind === 'main'){
+    var setsDone = (s.setLogs[s.currentIndex]||[]).length;
+
+    var target = document.createElement('div');
+    target.className = 'ex-target';
+    target.textContent = item.sets + ' סטים × ' + item.repRange[0] + '-' + item.repRange[1] + ' חזרות';
+    app.appendChild(target);
+
+    var setLabel = document.createElement('div');
+    setLabel.className = 'ex-set-label';
+    setLabel.textContent = 'סט ' + (setsDone+1) + ' מתוך ' + item.sets;
+    app.appendChild(setLabel);
+
+    var lastW = lastWeightFor(item.exerciseId);
+    var weightLine = document.createElement('div');
+    weightLine.className = 'ex-weight-hint';
+    if(lastW === null){
+      weightLine.textContent = 'פעם ראשונה בתרגיל הזה - תתחילי במשקל הכי קל שיש ותרגישי איך זה';
+    }else{
+      weightLine.innerHTML = 'פעם שעברה: ' + lastW + ' <bdi>ק"ג</bdi>';
+    }
+    app.appendChild(weightLine);
+  }
+
+  var cuesList = document.createElement('ul');
+  cuesList.className = 'ex-cues';
+  ex.cues.forEach(function(c){
+    var li = document.createElement('li');
+    li.textContent = c;
+    cuesList.appendChild(li);
+  });
+  app.appendChild(cuesList);
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+
+  if(item.kind === 'main'){
+    var primaryBtn = document.createElement('button');
+    primaryBtn.className = 'btn btn-primary';
+    primaryBtn.textContent = 'סיימתי סט';
+    primaryBtn.addEventListener('click', enterLogging);
+    app.appendChild(primaryBtn);
+
+    var row = document.createElement('div');
+    row.className = 'session-btn-row';
+    var subBtn = document.createElement('button');
+    subBtn.className = 'btn';
+    subBtn.textContent = 'החליפי תרגיל';
+    subBtn.addEventListener('click', function(){ s.phase='substitute'; saveState(); render(); });
+    var skipBtn = document.createElement('button');
+    skipBtn.className = 'btn';
+    skipBtn.textContent = 'דילוג';
+    skipBtn.addEventListener('click', skipExercise);
+    row.appendChild(subBtn);
+    row.appendChild(skipBtn);
+    app.appendChild(row);
+
+    var painBtn = document.createElement('button');
+    painBtn.className = 'btn btn-ghost';
+    painBtn.textContent = 'כואב לי';
+    painBtn.addEventListener('click', function(){ s.phase='pain_confirm'; saveState(); render(); });
+    app.appendChild(painBtn);
+  }else{
+    var contBtn = document.createElement('button');
+    contBtn.className = 'btn btn-primary';
+    contBtn.textContent = 'בוצע, הלאה';
+    contBtn.addEventListener('click', advanceExercise);
+    app.appendChild(contBtn);
+
+    var skipBtn2 = document.createElement('button');
+    skipBtn2.className = 'btn btn-ghost';
+    skipBtn2.textContent = 'דילוג';
+    skipBtn2.addEventListener('click', skipExercise);
+    app.appendChild(skipBtn2);
+  }
+}
+
+function renderSessionLogging(){
+  var s = state.activeSession;
+  var item = currentSessionItem();
+  var ex = EXERCISE_BY_ID[item.exerciseId];
+
+  var h = document.createElement('h2');
+  h.textContent = ex.he;
+  app.appendChild(h);
+  var sub = document.createElement('div');
+  sub.className = 'step-label';
+  sub.textContent = 'כמה חזרות ואיזה משקל?';
+  app.appendChild(sub);
+
+  app.appendChild(stepperRow('חזרות', s.pendingReps, function(delta){
+    s.pendingReps = Math.max(1, s.pendingReps + delta);
+    saveState();
+    render();
+  }));
+
+  app.appendChild(stepperRow('משקל (ק"ג)', s.pendingWeight, function(delta){
+    var inc = weightIncrement(ex);
+    s.pendingWeight = Math.max(0, Math.round((s.pendingWeight + delta*inc)*10)/10);
+    saveState();
+    render();
+  }, true));
+
+  var feelLabel = document.createElement('div');
+  feelLabel.className = 'step-label';
+  feelLabel.textContent = 'איך זה הרגיש?';
+  app.appendChild(feelLabel);
+
+  var feelRow = document.createElement('div');
+  feelRow.className = 'feel-row';
+  ['קל','מאוזן','מדי כבד'].forEach(function(feel){
+    var b = document.createElement('button');
+    b.className = 'btn feel-btn';
+    b.textContent = feel;
+    b.addEventListener('click', function(){ submitSet(feel); });
+    feelRow.appendChild(b);
+  });
+  app.appendChild(feelRow);
+}
+
+function renderSessionResting(){
+  var s = state.activeSession;
+
+  var wrap = document.createElement('div');
+  wrap.className = 'rest-wrap';
+
+  var ringWrap = document.createElement('div');
+  ringWrap.className = 'rest-ring-wrap';
+  var svgNS = 'http://www.w3.org/2000/svg';
+  var svg = document.createElementNS(svgNS,'svg');
+  svg.setAttribute('viewBox','0 0 200 200');
+  svg.setAttribute('class','rest-ring-svg');
+  var r = 88;
+  var circumference = 2*Math.PI*r;
+  var bg = document.createElementNS(svgNS,'circle');
+  bg.setAttribute('cx',100); bg.setAttribute('cy',100); bg.setAttribute('r',r);
+  bg.setAttribute('class','rest-ring-bg');
+  var fg = document.createElementNS(svgNS,'circle');
+  fg.setAttribute('cx',100); fg.setAttribute('cy',100); fg.setAttribute('r',r);
+  fg.setAttribute('class','rest-ring-fg');
+  fg.style.strokeDasharray = String(circumference);
+  svg.appendChild(bg);
+  svg.appendChild(fg);
+  var secondsEl = document.createElement('div');
+  secondsEl.className = 'rest-seconds';
+  ringWrap.appendChild(svg);
+  ringWrap.appendChild(secondsEl);
+  wrap.appendChild(ringWrap);
+
+  var nextLabel = document.createElement('div');
+  nextLabel.className = 'rest-next';
+  wrap.appendChild(nextLabel);
+
+  app.appendChild(wrap);
+
+  var btnRow = document.createElement('div');
+  btnRow.className = 'session-btn-row';
+  var addBtn = document.createElement('button');
+  addBtn.className = 'btn';
+  addBtn.textContent = 'הוסיפי 30 שניות';
+  addBtn.addEventListener('click', function(){
+    state.activeSession.restDurationSec += 30;
+    state.activeSession.restEndAt = new Date(new Date(state.activeSession.restEndAt).getTime() + 30000).toISOString();
+    saveState();
+    updateRestDisplay();
+  });
+  var skipRestBtn = document.createElement('button');
+  skipRestBtn.className = 'btn';
+  skipRestBtn.textContent = 'דלגי על המנוחה';
+  skipRestBtn.addEventListener('click', function(){
+    clearRestTicker();
+    finishRest();
+  });
+  btnRow.appendChild(addBtn);
+  btnRow.appendChild(skipRestBtn);
+  app.appendChild(btnRow);
+
+  function updateRestDisplay(){
+    var s2 = state.activeSession;
+    if(!s2 || s2.phase !== 'resting'){ clearRestTicker(); return; }
+    var left = Math.max(0, Math.round((new Date(s2.restEndAt).getTime() - Date.now())/1000));
+    secondsEl.textContent = formatMMSS(left);
+    var frac = s2.restDurationSec>0 ? Math.min(1, Math.max(0, left/s2.restDurationSec)) : 0;
+    fg.style.strokeDashoffset = String(circumference*(1-frac));
+
+    var curLogs = (s2.setLogs[s2.currentIndex]||[]).length;
+    var cur = s2.exercises[s2.currentIndex];
+    if(cur.kind==='main' && curLogs < cur.sets){
+      nextLabel.textContent = 'סט הבא: ' + EXERCISE_BY_ID[cur.exerciseId].he;
+    }else if(s2.exercises[s2.currentIndex+1]){
+      nextLabel.textContent = 'הבא: ' + EXERCISE_BY_ID[s2.exercises[s2.currentIndex+1].exerciseId].he;
+    }else{
+      nextLabel.textContent = 'זהו, הגעת לסוף האימון';
+    }
+
+    if(left<=0){
+      clearRestTicker();
+      finishRest();
+    }
+  }
+
+  updateRestDisplay();
+  clearRestTicker();
+  restIntervalHandle = setInterval(updateRestDisplay, 1000);
+}
+
+function renderSessionSubstitute(){
+  var s = state.activeSession;
+  var item = currentSessionItem();
+  var ex = EXERCISE_BY_ID[item.exerciseId];
+  var candidates = substituteCandidates(item);
+
+  var h = document.createElement('h2');
+  h.textContent = 'להחליף את ' + ex.he + '?';
+  app.appendChild(h);
+
+  var alwaysWrap = document.createElement('label');
+  alwaysWrap.className = 'always-sub-row';
+  var alwaysCheckbox = document.createElement('input');
+  alwaysCheckbox.type = 'checkbox';
+  alwaysWrap.appendChild(alwaysCheckbox);
+  var alwaysText = document.createElement('span');
+  alwaysText.textContent = 'תמיד להחליף (גם באימונים הבאים)';
+  alwaysWrap.appendChild(alwaysText);
+  app.appendChild(alwaysWrap);
+
+  if(!candidates.length){
+    var none = document.createElement('p');
+    none.textContent = 'אין כרגע חלופה זמינה לתרגיל הזה עם הציוד שסימנת.';
+    app.appendChild(none);
+  }else{
+    candidates.forEach(function(cand){
+      var card = document.createElement('button');
+      card.className = 'option-btn';
+      card.innerHTML = '<span class="opt-title">'+esc(cand.he)+'</span><span class="opt-desc">מתאימה לאותה קבוצת שרירים, בציוד אחר</span>';
+      card.addEventListener('click', function(){
+        chooseSubstitute(cand, alwaysCheckbox.checked);
+      });
+      app.appendChild(card);
+    });
+  }
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+
+  var back = document.createElement('button');
+  back.className = 'btn btn-ghost';
+  back.textContent = 'ביטול';
+  back.addEventListener('click', function(){ s.phase='exercise'; saveState(); render(); });
+  app.appendChild(back);
+}
+
+function renderSessionPainConfirm(){
+  var s = state.activeSession;
+  var item = currentSessionItem();
+  var ex = EXERCISE_BY_ID[item.exerciseId];
+
+  var h = document.createElement('h2');
+  h.textContent = 'כואב לך ב' + ex.he + '?';
+  app.appendChild(h);
+  var p = document.createElement('p');
+  p.textContent = 'אם זה כאב חד או כאב במפרק (לא סתם צריבה רגילה בשריר) - עדיף להוציא את התרגיל הזה מהתוכניות הבאות. תמיד אפשר להפעיל אותו מחדש בהגדרות.';
+  app.appendChild(p);
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+
+  var confirmBtn = document.createElement('button');
+  confirmBtn.className = 'btn btn-danger';
+  confirmBtn.textContent = 'כן, תוציאי את זה';
+  confirmBtn.addEventListener('click', confirmPain);
+  app.appendChild(confirmBtn);
+
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-ghost';
+  cancelBtn.textContent = 'לא, בטעות לחצתי';
+  cancelBtn.addEventListener('click', function(){ s.phase='exercise'; saveState(); render(); });
+  app.appendChild(cancelBtn);
+}
+
+function renderSessionSummary(){
+  var s = state.activeSession;
+  var summary = s.summary || {totalMinutes:0, totalVolume:0, prNames:[]};
+
+  var h = document.createElement('div');
+  h.className = 'greet';
+  h.textContent = 'כל הכבוד, ' + state.profile.name + '!';
+  app.appendChild(h);
+
+  var card = document.createElement('div');
+  card.className = 'day-card';
+  var row1 = document.createElement('div');
+  row1.className = 'ex-row';
+  row1.innerHTML = '<span>זמן אימון</span><span class="muted">'+summary.totalMinutes+' דקות</span>';
+  var row2 = document.createElement('div');
+  row2.className = 'ex-row';
+  row2.innerHTML = '<span>נפח כולל</span><span class="muted"><bdi>'+summary.totalVolume+' ק"ג</bdi></span>';
+  card.appendChild(row1);
+  card.appendChild(row2);
+  app.appendChild(card);
+
+  if(summary.prNames.length){
+    var prBox = document.createElement('div');
+    prBox.className = 'pr-box';
+    prBox.innerHTML = '<b>שיא אישי חדש! 🎉</b>' + esc(summary.prNames.join(', '));
+    app.appendChild(prBox);
+  }
+
+  var closing = document.createElement('p');
+  closing.textContent = 'עוד אימון מאחורייך. תמשיכי ככה.';
+  app.appendChild(closing);
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+
+  var doneBtn = document.createElement('button');
+  doneBtn.className = 'btn btn-primary';
+  doneBtn.textContent = 'סיום, חזרה הביתה';
+  doneBtn.addEventListener('click', endSession);
+  app.appendChild(doneBtn);
 }
 
 /* ---------------------------------------------------------------------

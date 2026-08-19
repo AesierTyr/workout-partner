@@ -101,7 +101,7 @@ She is a beginner training alone. The app must be conservative by design.
 2. **First session of any new exercise is calibration, not training.** The app
    explicitly instructs: use the lightest available weight, do the reps, and
    record how it felt. It suggests real working weight only from session two.
-3. **"How did that feel?" after every set** — three buttons: `קל` / `מאוזר` /
+3. **"How did that feel?" after every set** — three buttons: `קל` / `מאוזן` /
    `מדי כבד`. This drives the progression logic and is the only input she has
    to give.
 4. **Never increase weight more than one increment per week per exercise.**
@@ -237,7 +237,7 @@ Full-screen, one exercise at a time. Layout top to bottom:
    - **כואב לי** (triggers §3.7)
 
 After **סיימתי סט**: quick log — reps done (stepper, prefilled with target),
-weight (stepper), and feel (`קל` / `מאוזר` / `מדי כבד`). Three taps max. Then
+weight (stepper), and feel (`קל` / `מאוזן` / `מדי כבד`). Three taps max. Then
 rest timer.
 
 **Rest timer:** big circular countdown, and voice. She can add 30s or skip.
@@ -407,7 +407,7 @@ Algorithm:
 **Progression logic** (runs when generating the next session's suggestions):
 - All sets at top of rep range and feel = `קל` → increase weight one increment
   (2.5kg for machines/barbell-ish, 1–2kg for dumbbells) and drop to bottom of rep range.
-- feel = `מאוזר` → same weight, add one rep.
+- feel = `מאוזן` → same weight, add one rep.
 - feel = `מדי כבד` or reps missed → hold weight, or reduce 10% if it happens twice.
 - Missed more than 10 days → drop all suggestions 10% and say so kindly.
 
