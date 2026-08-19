@@ -713,6 +713,26 @@ function availableExercises(){
   });
 }
 
+// Slots whose exercise choice is meant to stay stable week over week, so the
+// number on the bar/machine for the day's main lifts is actually comparable
+// from one session to the next. Everything else (core work, bonus accessory
+// slots added when the time budget allows it) rotates to keep things fresh.
+var ANCHOR_SLOTS = ['squat_lunge','hinge','horizontal_push','horizontal_pull','vertical'];
+
+var WARMUP_SEC = 5*60;
+var COOLDOWN_SEC = 5*60;
+var SECONDS_PER_REP_SET = 40; // rough time-under-tension per set, per spec §8.4
+// Exercise COUNT is fit to the time budget using a fixed reference set count,
+// not the current week's actual set count. Otherwise a session would balloon
+// from ~7 exercises to ~10 during the 2-sets calibration weeks just because
+// each one is quicker - the same session should stay roughly the same length
+// and shape every week; only the sets-per-exercise (2 -> 3) and which specific
+// exercise fills a rotating slot should change week to week.
+var REFERENCE_SETS = 3;
+var MIN_EXERCISES_PER_DAY = 5; // guarantees the 5 primary movement-pattern slots always fit
+var MAX_EXERCISES_PER_DAY = 9;
+var MAX_EXTRA_ROUNDS = 3;
+
 function pickForSlot(slot, pool, used, rotation){
   var candidates;
   if(slot === 'squat_lunge') candidates = pool.filter(function(e){ return e.pattern==='squat' || e.pattern==='lunge'; });
@@ -721,15 +741,9 @@ function pickForSlot(slot, pool, used, rotation){
   else candidates = pool.filter(function(e){ return e.pattern===slot; });
   candidates = candidates.filter(function(e){ return used.indexOf(e.id)===-1; });
   if(!candidates.length) return null;
-  // Rotate which candidate leads so different days of the same week (and different
-  // weeks) don't all land on the identical exercise for a given slot.
+  // Rotate which candidate leads so different days of the same week, and the
+  // same day in later weeks, don't always land on the identical exercise.
   return candidates[rotation % candidates.length];
-}
-
-function exerciseCountForMinutes(min){
-  if(min <= 30) return 5;
-  if(min <= 45) return 7;
-  return 8;
 }
 
 function mobilityPick(idsPreferred){
@@ -740,26 +754,54 @@ function mobilityPick(idsPreferred){
   return null;
 }
 
-function buildDay(nameHe, pool, count, dayIndex){
+// Training week number since her first logged session (week 1 = brand new).
+// Drives both the 2-vs-3 sets rule and how far the week-to-week rotation has
+// advanced. Purely a function of calendar time, so re-generating the plan
+// twice in the same week yields the identical plan (§8: deterministic, no
+// randomness beyond variety selection).
+function getCurrentWeekNumber(){
+  if(!state.log.length) return 1;
+  var earliest = state.log.reduce(function(min, entry){
+    var t = new Date(entry.date).getTime();
+    return isNaN(t) ? min : Math.min(min, t);
+  }, Infinity);
+  if(!isFinite(earliest)) return 1;
+  var weeksElapsed = Math.floor((Date.now() - earliest) / (7*24*3600*1000));
+  return Math.max(1, weeksElapsed + 1);
+}
+
+function setsForWeek(week){
+  return week <= 2 ? 2 : 3;
+}
+
+function buildDay(nameHe, pool, dayIndex, weekNumber){
+  var sets = setsForWeek(weekNumber);
+  var budgetSec = Math.max(0, state.profile.sessionMinutes*60 - WARMUP_SEC - COOLDOWN_SEC);
   var used = [];
   var blocks = [];
+  var usedSec = 0;
   var i = 0;
   var round = 0;
-  while(blocks.length < count && i < SLOT_ORDER.length){
-    var slot = SLOT_ORDER[i];
-    var ex = pickForSlot(slot, pool, used, dayIndex + round);
-    if(ex){
-      used.push(ex.id);
-      blocks.push({exerciseId:ex.id, sets:2, repRange:ex.repRange.slice(), restSec:ex.restSec});
-    }
-    i++;
-    if(i >= SLOT_ORDER.length && blocks.length < count){
+
+  while(round <= MAX_EXTRA_ROUNDS && blocks.length < MAX_EXERCISES_PER_DAY){
+    if(i >= SLOT_ORDER.length){
       i = 0;
       round++;
-      var any = pool.filter(function(e){ return used.indexOf(e.id)===-1; });
-      if(!any.length) break;
+      continue;
     }
+    var slot = SLOT_ORDER[i];
+    var isAnchor = round === 0 && ANCHOR_SLOTS.indexOf(slot) !== -1;
+    var rotation = isAnchor ? dayIndex : (dayIndex + weekNumber + round);
+    var ex = pickForSlot(slot, pool, used, rotation);
+    i++;
+    if(!ex) continue;
+    var refSec = REFERENCE_SETS * (SECONDS_PER_REP_SET + ex.restSec);
+    if(blocks.length >= MIN_EXERCISES_PER_DAY && usedSec + refSec > budgetSec) break;
+    used.push(ex.id);
+    blocks.push({exerciseId:ex.id, sets:sets, repRange:ex.repRange.slice(), restSec:ex.restSec});
+    usedSec += refSec;
   }
+
   var warm = mobilityPick(rotate(['cat_cow','hip_circles','shoulder_rolls','treadmill_walk','bike_easy'], dayIndex));
   var cool = mobilityPick(rotate(['child_pose','cat_cow'], dayIndex));
   var warmupBlocks = warm ? [{exerciseId:warm.id, sets:1, repRange:warm.repRange.slice(), restSec:0}] : [];
@@ -776,12 +818,12 @@ var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳'];
 
 function generatePlan(){
   var pool = availableExercises();
-  var count = exerciseCountForMinutes(state.profile.sessionMinutes);
+  var weekNumber = getCurrentWeekNumber();
   var days = [];
   for(var d=0; d<state.profile.daysPerWeek; d++){
-    days.push(buildDay('גוף מלא ' + DAY_LETTERS[d % DAY_LETTERS.length], pool, count, d));
+    days.push(buildDay('גוף מלא ' + DAY_LETTERS[d % DAY_LETTERS.length], pool, d, weekNumber));
   }
-  return {generatedAt:new Date().toISOString(), split:'fullbody', days:days};
+  return {generatedAt:new Date().toISOString(), split:'fullbody', weekNumber:weekNumber, days:days};
 }
 
 /* ---------------------------------------------------------------------
