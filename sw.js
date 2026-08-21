@@ -5,7 +5,7 @@
 // `activate` safely wipe every old cache without touching localStorage -
 // the Cache Storage API and localStorage are entirely separate stores, so
 // nothing here can ever reach her workout log.
-var CACHE_VERSION = '1.0.0';
+var CACHE_VERSION = '1.1.0';
 var CACHE_NAME = 'coach-' + CACHE_VERSION;
 
 var APP_SHELL = [
