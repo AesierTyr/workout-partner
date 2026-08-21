@@ -206,6 +206,17 @@
   .day-card h3{margin:0 0 8px;font-size:17px;}
   .ex-row{display:flex;justify-content:space-between;font-size:15px;padding:6px 0;border-top:1px dashed var(--border);}
   .ex-row:first-of-type{border-top:none;}
+  .plan-ex-row{
+    display:flex;justify-content:space-between;align-items:center;width:100%;
+    font-size:15px;padding:10px 2px;border-top:1px dashed var(--border);
+    background:none;border-left:none;border-right:none;border-bottom:none;
+    text-align:right;cursor:pointer;min-height:44px;color:var(--text);font-family:inherit;
+  }
+  .plan-ex-row:first-of-type{border-top:none;}
+  .plan-ex-row-static{cursor:default;color:var(--muted);}
+  .plan-ex-name{font-weight:600;}
+  .plan-ex-meta{color:var(--muted);display:flex;align-items:center;gap:8px;font-size:13px;}
+  .plan-ex-swap{color:var(--accent);font-weight:700;white-space:nowrap;}
   .muted{color:var(--muted);}
   bdi{unicode-bidi:isolate;}
   .checkbox-note{font-size:13px;color:var(--muted);margin:-4px 0 16px;}
@@ -920,6 +931,8 @@ function render(){
     case 'home': renderHome(); break;
     case 'settings': renderSettings(); break;
     case 'session': renderSession(); break;
+    case 'plan': renderPlan(); break;
+    case 'plan_swap': renderPlanSwap(); break;
     default: renderHome();
   }
 }
@@ -1238,6 +1251,13 @@ function renderHome(){
 
   var links = document.createElement('div');
   links.className = 'link-row';
+  if(state.plan){
+    var planLink = document.createElement('button');
+    planLink.className = 'btn btn-ghost';
+    planLink.textContent = 'התוכנית שלי';
+    planLink.addEventListener('click', function(){ go('plan'); });
+    links.appendChild(planLink);
+  }
   var settingsLink = document.createElement('button');
   settingsLink.className = 'btn btn-ghost';
   settingsLink.textContent = 'הגדרות';
@@ -1390,6 +1410,123 @@ function renderSettings(){
   spacer.className = 'spacer';
   app.appendChild(spacer);
   app.appendChild(backLink('home'));
+}
+
+/* ---------------------------------------------------------------------
+   PLAN EDITOR - swap exercises directly from the weekly schedule, not
+   just mid-session (equipment taken, or she just doesn't like one).
+--------------------------------------------------------------------- */
+function planBlockLabel(kind){
+  if(kind === 'warmup') return 'חימום';
+  if(kind === 'cooldown') return 'שחרור';
+  return null;
+}
+
+function renderPlan(){
+  var h = document.createElement('h1');
+  h.textContent = 'התוכנית השבועית שלי';
+  app.appendChild(h);
+
+  var p = document.createElement('p');
+  p.textContent = 'אפשר להחליף כל תרגיל שלא מתאים - כי המכשיר תפוס, כי לא אהבת אותו, או כל סיבה אחרת. השינוי נשאר קבוע בתוכנית.';
+  app.appendChild(p);
+
+  if(!state.plan || !state.plan.days.length){
+    var none = document.createElement('p');
+    none.textContent = 'עוד אין תוכנית - עדכני את הציוד בהגדרות.';
+    app.appendChild(none);
+  }
+
+  (state.plan ? state.plan.days : []).forEach(function(day){
+    var card = document.createElement('div');
+    card.className = 'day-card';
+    var h3 = document.createElement('h3');
+    h3.textContent = day.nameHe;
+    card.appendChild(h3);
+
+    ['warmup','blocks','cooldown'].forEach(function(arrayName){
+      var isMain = arrayName === 'blocks';
+      (day[arrayName] || []).forEach(function(block, blockIndex){
+        var ex = EXERCISE_BY_ID[block.exerciseId];
+        if(!ex) return;
+        // Warmup/cooldown mobility drills have no substitute chain (same as
+        // the in-session flow, which only offers swapping for main exercises).
+        var row = document.createElement(isMain ? 'button' : 'div');
+        row.className = 'plan-ex-row' + (isMain ? '' : ' plan-ex-row-static');
+        var kindLabel = planBlockLabel(isMain ? null : arrayName);
+        var metaText = isMain ? (block.sets + ' × ' + block.repRange[0] + '-' + block.repRange[1]) : (kindLabel || '');
+        row.innerHTML =
+          '<span class="plan-ex-name">'+esc(ex.he)+'</span>' +
+          '<span class="plan-ex-meta">'+esc(metaText)+(isMain ? ' <span class="plan-ex-swap">🔁 החלפה</span>' : '')+'</span>';
+        if(!isMain) return void card.appendChild(row);
+        row.addEventListener('click', function(){
+          state.ui = {screen:'plan_swap', dayId:day.id, arrayName:arrayName, blockIndex:blockIndex};
+          saveState();
+          render();
+        });
+        card.appendChild(row);
+      });
+    });
+    app.appendChild(card);
+  });
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+  app.appendChild(backLink('home'));
+}
+
+function renderPlanSwap(){
+  var ctx = state.ui;
+  var day = state.plan.days.filter(function(d){ return d.id === ctx.dayId; })[0];
+  var block = day && day[ctx.arrayName] && day[ctx.arrayName][ctx.blockIndex];
+  if(!block){ go('plan'); return; }
+  var ex = EXERCISE_BY_ID[block.exerciseId];
+
+  var h = document.createElement('h2');
+  h.textContent = 'להחליף את ' + ex.he + '?';
+  app.appendChild(h);
+  var sub = document.createElement('div');
+  sub.className = 'step-label';
+  sub.textContent = day.nameHe;
+  app.appendChild(sub);
+
+  var candidates = substituteCandidatesForExercise(block.exerciseId);
+  if(!candidates.length){
+    var none = document.createElement('p');
+    none.textContent = 'אין כרגע חלופה זמינה לתרגיל הזה עם הציוד שסימנת.';
+    app.appendChild(none);
+  }else{
+    candidates.forEach(function(cand){
+      var card = document.createElement('button');
+      card.className = 'option-btn';
+      card.innerHTML = '<span class="opt-title">'+esc(cand.he)+'</span><span class="opt-desc">מתאימה לאותה קבוצת שרירים, בציוד אחר</span>';
+      card.addEventListener('click', function(){
+        applyPlanSwap(day, ctx.arrayName, ctx.blockIndex, cand);
+      });
+      app.appendChild(card);
+    });
+  }
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+
+  var back = document.createElement('button');
+  back.className = 'btn btn-ghost';
+  back.textContent = 'ביטול';
+  back.addEventListener('click', function(){ go('plan'); });
+  app.appendChild(back);
+}
+
+function applyPlanSwap(day, arrayName, blockIndex, cand){
+  var block = day[arrayName][blockIndex];
+  block.exerciseId = cand.id;
+  block.repRange = cand.repRange.slice();
+  block.restSec = cand.restSec;
+  saveState();
+  toast('התרגיל הוחלף');
+  go('plan');
 }
 
 /* ---------------------------------------------------------------------
@@ -1803,8 +1940,8 @@ function skipExercise(){
   advanceExercise();
 }
 
-function substituteCandidates(item){
-  var ex = EXERCISE_BY_ID[item.exerciseId];
+function substituteCandidatesForExercise(exerciseId){
+  var ex = EXERCISE_BY_ID[exerciseId];
   var subs = (ex && ex.substitutes) || [];
   var out = [];
   subs.forEach(function(id){
@@ -1815,6 +1952,10 @@ function substituteCandidates(item){
     out.push(cand);
   });
   return out.slice(0,3);
+}
+
+function substituteCandidates(item){
+  return substituteCandidatesForExercise(item.exerciseId);
 }
 
 function chooseSubstitute(cand, always){
