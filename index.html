@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#fbf8f5">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-192.png">
 <title>המאמנת שלי</title>
 <style>
   :root{
@@ -288,6 +290,10 @@
    STORAGE
 --------------------------------------------------------------------- */
 var STORAGE_KEY = 'coach_v1';
+// Bump together with CACHE_VERSION in sw.js on every deploy that should
+// trigger the "app updated" notice and a fresh app-shell cache.
+var APP_VERSION = '1.0.0';
+var SEEN_VERSION_KEY = 'coach_v1_seen_version'; // separate from STORAGE_KEY - never touches her workout data
 
 function defaultState(){
   return {
@@ -1411,6 +1417,12 @@ function renderSettings(){
     }
   });
   app.appendChild(resetBtn);
+
+  var updateBtn = document.createElement('button');
+  updateBtn.className = 'btn btn-ghost';
+  updateBtn.textContent = 'בדיקת עדכונים';
+  updateBtn.addEventListener('click', forceUpdateCheck);
+  app.appendChild(updateBtn);
 
   var box = document.createElement('div');
   box.className = 'disclaimer-box';
@@ -2706,8 +2718,80 @@ function shareSession(){
 }
 
 /* ---------------------------------------------------------------------
+   PWA - offline install + update handling (§2.1, §11)
+--------------------------------------------------------------------- */
+function checkForUpdateNotice(){
+  try{
+    var seen = localStorage.getItem(SEEN_VERSION_KEY);
+    if(seen && seen !== APP_VERSION){
+      toast('האפליקציה עודכנה לגרסה חדשה ✨');
+    }
+    localStorage.setItem(SEEN_VERSION_KEY, APP_VERSION);
+  }catch(e){}
+}
+
+function registerServiceWorker(){
+  if(!('serviceWorker' in navigator)) return;
+  // A controllerchange fires both the very first time a worker ever takes
+  // control of this page AND on a genuine later update - only the second
+  // case should reload. Capture whether we were already controlled before
+  // registering to tell them apart.
+  var hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('./sw.js').then(function(reg){
+    reg.update().catch(function(){});
+  }).catch(function(){});
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if(!hadController){ hadController = true; return; }
+    location.reload();
+  });
+}
+
+function forceUpdateCheck(){
+  if(!('serviceWorker' in navigator)){
+    toast('שירות אופליין לא נתמך בדפדפן הזה');
+    return;
+  }
+  navigator.serviceWorker.getRegistration().then(function(reg){
+    if(!reg){
+      toast('לא נמצא שירות אופליין רשום עדיין - נסי שוב עוד רגע');
+      return;
+    }
+    if(reg.waiting){
+      toast('נמצא עדכון - מעדכנת...');
+      reg.waiting.postMessage('SKIP_WAITING');
+      return;
+    }
+    // reg.update() resolving does NOT mean a detected update has finished
+    // installing yet (it still needs to fetch the whole app shell) - so we
+    // have to actually wait for the new worker to reach "installed" rather
+    // than just re-checking reg.waiting right after update() resolves.
+    var foundUpdate = false;
+    reg.addEventListener('updatefound', function(){
+      foundUpdate = true;
+      var installing = reg.installing;
+      if(!installing) return;
+      installing.addEventListener('statechange', function(){
+        if(installing.state === 'installed' && navigator.serviceWorker.controller){
+          toast('נמצא עדכון - מעדכנת...');
+          installing.postMessage('SKIP_WAITING');
+        }
+      });
+    });
+    reg.update().then(function(){
+      setTimeout(function(){
+        if(!foundUpdate) toast('את כבר בגרסה העדכנית ביותר');
+      }, 2000);
+    }).catch(function(){
+      toast('לא הצלחתי לבדוק עדכונים - בדקי את החיבור');
+    });
+  });
+}
+
+/* ---------------------------------------------------------------------
    INIT
 --------------------------------------------------------------------- */
+checkForUpdateNotice();
+registerServiceWorker();
 initVoice();
 render();
 </script>
