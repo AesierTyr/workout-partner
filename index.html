@@ -217,6 +217,11 @@
   .plan-ex-name{font-weight:600;}
   .plan-ex-meta{color:var(--muted);display:flex;align-items:center;gap:8px;font-size:13px;}
   .plan-ex-swap{color:var(--accent);font-weight:700;white-space:nowrap;}
+
+  .chart-wrap{margin-top:10px;}
+  .progress-chart{width:100%;height:70px;display:block;}
+  .progress-line{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round;}
+  .progress-dot{fill:var(--accent);}
   .muted{color:var(--muted);}
   bdi{unicode-bidi:isolate;}
   .checkbox-note{font-size:13px;color:var(--muted);margin:-4px 0 16px;}
@@ -933,6 +938,7 @@ function render(){
     case 'session': renderSession(); break;
     case 'plan': renderPlan(); break;
     case 'plan_swap': renderPlanSwap(); break;
+    case 'history': renderHistory(); break;
     default: renderHome();
   }
 }
@@ -1258,6 +1264,11 @@ function renderHome(){
     planLink.addEventListener('click', function(){ go('plan'); });
     links.appendChild(planLink);
   }
+  var historyLink = document.createElement('button');
+  historyLink.className = 'btn btn-ghost';
+  historyLink.textContent = 'היסטוריה';
+  historyLink.addEventListener('click', function(){ go('history'); });
+  links.appendChild(historyLink);
   var settingsLink = document.createElement('button');
   settingsLink.className = 'btn btn-ghost';
   settingsLink.textContent = 'הגדרות';
@@ -1530,6 +1541,98 @@ function applyPlanSwap(day, arrayName, blockIndex, cand){
 }
 
 /* ---------------------------------------------------------------------
+   HISTORY (§5.6) - per-exercise weight progression, total sessions, PB.
+   Plain inline-SVG line chart, no library: she wants to see the line go
+   up, not analyze it.
+--------------------------------------------------------------------- */
+function buildProgressSVG(weights){
+  var w = 300, h = 70, pad = 12;
+  var minW = Math.min.apply(null, weights);
+  var maxW = Math.max.apply(null, weights);
+  var range = Math.max(1, maxW - minW);
+  var xFor = function(i){ return weights.length>1 ? pad + (i/(weights.length-1)) * (w-2*pad) : w/2; };
+  var yFor = function(v){ return h - pad - ((v-minW)/range) * (h-2*pad); };
+  var points = weights.map(function(v,i){ return xFor(i)+','+yFor(v); }).join(' ');
+  var dots = weights.map(function(v,i){
+    return '<circle class="progress-dot" cx="'+xFor(i)+'" cy="'+yFor(v)+'" r="3.5"/>';
+  }).join('');
+  return '<svg viewBox="0 0 '+w+' '+h+'" class="progress-chart" preserveAspectRatio="none">' +
+    '<polyline class="progress-line" points="'+points+'"/>' + dots + '</svg>';
+}
+
+function renderHistory(){
+  var h = document.createElement('h1');
+  h.textContent = 'היסטוריה';
+  app.appendChild(h);
+
+  var sessionDates = {};
+  state.log.forEach(function(e){ if(e.sets && e.sets.length) sessionDates[e.date] = true; });
+  var totalSessions = Object.keys(sessionDates).length;
+
+  var summary = document.createElement('div');
+  summary.className = 'streak-pill';
+  summary.textContent = 'סה"כ ' + totalSessions + ' אימונים נרשמו';
+  app.appendChild(summary);
+
+  var byExercise = {};
+  state.log.forEach(function(e){
+    if(!e.sets || !e.sets.length) return;
+    if(!byExercise[e.exerciseId]) byExercise[e.exerciseId] = [];
+    byExercise[e.exerciseId].push({date:e.date, weight:sessionMaxWeight(e)});
+  });
+
+  var exerciseIds = Object.keys(byExercise).sort(function(a,b){
+    var pointsA = byExercise[a], pointsB = byExercise[b];
+    var lastA = pointsA[pointsA.length-1].date, lastB = pointsB[pointsB.length-1].date;
+    return new Date(lastB) - new Date(lastA);
+  });
+
+  if(!exerciseIds.length){
+    var p = document.createElement('p');
+    p.textContent = 'עוד אין נתונים - אחרי כמה אימונים תראי כאן את ההתקדמות שלך.';
+    app.appendChild(p);
+  }
+
+  exerciseIds.forEach(function(exId){
+    var ex = EXERCISE_BY_ID[exId];
+    if(!ex) return;
+    var points = byExercise[exId].slice().sort(function(a,b){ return new Date(a.date) - new Date(b.date); });
+    var weights = points.map(function(pt){ return pt.weight; });
+    var best = Math.max.apply(null, weights);
+
+    var card = document.createElement('div');
+    card.className = 'day-card';
+    var h3 = document.createElement('h3');
+    h3.textContent = ex.he;
+    card.appendChild(h3);
+
+    var bestRow = document.createElement('div');
+    bestRow.className = 'ex-row';
+    bestRow.innerHTML = '<span>שיא אישי</span><span class="muted"><bdi>'+best+' ק"ג</bdi></span>';
+    card.appendChild(bestRow);
+
+    var countRow = document.createElement('div');
+    countRow.className = 'ex-row';
+    countRow.innerHTML = '<span>מספר פעמים</span><span class="muted">'+weights.length+'</span>';
+    card.appendChild(countRow);
+
+    if(weights.length >= 2){
+      var chartWrap = document.createElement('div');
+      chartWrap.className = 'chart-wrap';
+      chartWrap.innerHTML = buildProgressSVG(weights);
+      card.appendChild(chartWrap);
+    }
+
+    app.appendChild(card);
+  });
+
+  var spacer = document.createElement('div');
+  spacer.className = 'spacer';
+  app.appendChild(spacer);
+  app.appendChild(backLink('home'));
+}
+
+/* ---------------------------------------------------------------------
    WAKE LOCK - keep the screen on during a session (§5.4, §11)
 --------------------------------------------------------------------- */
 var wakeLockSentinel = null;
@@ -1755,8 +1858,14 @@ function buildNewExerciseText(item, ex, isFirstInSession){
   }
   lines.push(ex.he + '.');
   if(item.kind === 'main'){
-    var lastW = lastWeightFor(item.exerciseId);
-    lines.push(lastW===null ? 'פעם ראשונה בתרגיל הזה - תתחילי במשקל הכי קל שיש.' : ('פעם שעברה עשית ' + lastW + ' קילו.'));
+    var suggestion = suggestedWeightFor(item.exerciseId);
+    if(suggestion === null){
+      lines.push('פעם ראשונה בתרגיל הזה - תתחילי במשקל הכי קל שיש.');
+    }else if(suggestion.suggestion === suggestion.lastWeight){
+      lines.push('פעם שעברה עשית ' + suggestion.lastWeight + ' קילו.');
+    }else{
+      lines.push('פעם שעברה עשית ' + suggestion.lastWeight + ' קילו. נסי ' + suggestion.suggestion + ' קילו הפעם.');
+    }
     lines.push(ex.cues.join('. ') + '.');
     lines.push(item.sets + ' סטים, ' + item.repRange[0] + ' עד ' + item.repRange[1] + ' חזרות.');
   }
@@ -1809,6 +1918,67 @@ function personalBestFor(exerciseId){
     });
   });
   return best;
+}
+
+function logEntriesFor(exerciseId){
+  return state.log
+    .filter(function(e){ return e.exerciseId === exerciseId && e.sets && e.sets.length; })
+    .sort(function(a,b){ return new Date(a.date) - new Date(b.date); });
+}
+
+function sessionMaxWeight(entry){
+  return entry.sets.reduce(function(m,s){ return Math.max(m, s.weight||0); }, 0);
+}
+
+// Progression logic per spec §8: proposes next session's weight from how the
+// last logged session actually went, not just "whatever she did last time".
+// Rounds a ~10% cut down to the nearest valid increment, and guarantees an
+// actual decrease (rounding a small weight/increment pair up to the same
+// number would silently undo the whole point of the cut).
+function reduceWeight(weight, inc){
+  var reduced = Math.floor((weight * 0.9) / inc) * inc;
+  if(reduced >= weight) reduced = weight - inc;
+  return Math.max(0, reduced);
+}
+
+function suggestedWeightFor(exerciseId){
+  var ex = EXERCISE_BY_ID[exerciseId];
+  var entries = logEntriesFor(exerciseId);
+  if(!entries.length) return null;
+
+  var last = entries[entries.length-1];
+  var lastWeight = sessionMaxWeight(last);
+  var inc = weightIncrement(ex);
+
+  var allTopRange = last.sets.every(function(s){ return s.reps >= ex.repRange[1]; });
+  var allEasy = last.sets.every(function(s){ return s.feel === 'קל'; });
+  var missedOrHeavy = last.sets.some(function(s){ return s.feel === 'מדי כבד' || s.reps < ex.repRange[0]; });
+
+  var suggestion = lastWeight;
+  var note = null;
+
+  if(allTopRange && allEasy){
+    suggestion = lastWeight + inc;
+    note = 'עלית בכל הסטים בקלות - קדימה, מעלים משקל';
+  }else if(missedOrHeavy){
+    var prev = entries[entries.length-2];
+    var prevMissedOrHeavy = prev && prev.sets.some(function(s){ return s.feel === 'מדי כבד' || s.reps < ex.repRange[0]; });
+    if(prevMissedOrHeavy){
+      suggestion = reduceWeight(lastWeight, inc);
+      note = 'הרגיש כבד פעמיים ברצף - יורדים קצת במשקל';
+    }else{
+      suggestion = lastWeight;
+      note = 'אותו משקל כמו פעם שעברה - ננסה שוב';
+    }
+  }
+
+  var daysSinceLast = (Date.now() - new Date(last.date).getTime()) / 86400000;
+  if(daysSinceLast > 10){
+    suggestion = reduceWeight(suggestion, inc);
+    note = 'עבר קצת זמן מהאימון האחרון, אז ירדנו קלות במשקל כדי לחזור בבטחה';
+  }
+
+  return {lastWeight:lastWeight, suggestion:suggestion, note:note};
 }
 
 function formatMMSS(totalSeconds){
@@ -1889,8 +2059,9 @@ function advanceExercise(){
 function enterLogging(){
   var s = state.activeSession;
   var item = currentSessionItem();
+  var suggestion = suggestedWeightFor(item.exerciseId);
   s.pendingReps = item.repRange[1];
-  s.pendingWeight = lastWeightFor(item.exerciseId) || 0;
+  s.pendingWeight = suggestion ? suggestion.suggestion : 0;
   s.phase = 'logging';
   saveState();
   render();
@@ -2160,13 +2331,15 @@ function renderSessionExercise(){
     setLabel.textContent = 'סט ' + (setsDone+1) + ' מתוך ' + item.sets;
     app.appendChild(setLabel);
 
-    var lastW = lastWeightFor(item.exerciseId);
+    var suggestion = suggestedWeightFor(item.exerciseId);
     var weightLine = document.createElement('div');
     weightLine.className = 'ex-weight-hint';
-    if(lastW === null){
+    if(suggestion === null){
       weightLine.textContent = 'פעם ראשונה בתרגיל הזה - תתחילי במשקל הכי קל שיש ותרגישי איך זה';
+    }else if(suggestion.suggestion === suggestion.lastWeight){
+      weightLine.innerHTML = 'פעם שעברה: <bdi>' + suggestion.lastWeight + ' ק"ג</bdi>';
     }else{
-      weightLine.innerHTML = 'פעם שעברה: ' + lastW + ' <bdi>ק"ג</bdi>';
+      weightLine.innerHTML = 'פעם שעברה: <bdi>' + suggestion.lastWeight + ' ק"ג</bdi> - נסי <bdi>' + suggestion.suggestion + ' ק"ג</bdi>';
     }
     app.appendChild(weightLine);
   }
@@ -2476,11 +2649,60 @@ function renderSessionSummary(){
   spacer.className = 'spacer';
   app.appendChild(spacer);
 
+  var shareBtn = document.createElement('button');
+  shareBtn.className = 'btn';
+  shareBtn.textContent = 'שתפי אימון 📤';
+  shareBtn.addEventListener('click', shareSession);
+  app.appendChild(shareBtn);
+
   var doneBtn = document.createElement('button');
   doneBtn.className = 'btn btn-primary';
   doneBtn.textContent = 'סיום, חזרה הביתה';
   doneBtn.addEventListener('click', endSession);
   app.appendChild(doneBtn);
+}
+
+function buildShareText(){
+  var s = state.activeSession;
+  var day = state.plan.days.filter(function(d){ return d.id === s.dayId; })[0];
+  var dateStr = new Date(s.startedAt).toLocaleDateString('he-IL');
+  var summary = s.summary || {totalMinutes:0, totalVolume:0, prNames:[]};
+
+  var lines = [];
+  lines.push('אימון ' + (day ? day.nameHe : '') + ' - ' + dateStr);
+  lines.push('');
+  s.exercises.forEach(function(item, idx){
+    if(item.kind !== 'main') return;
+    var setsLogged = s.setLogs[idx];
+    if(!setsLogged || !setsLogged.length) return;
+    var ex = EXERCISE_BY_ID[item.exerciseId];
+    var best = sessionMaxWeight({sets:setsLogged});
+    lines.push('• ' + ex.he + ' - ' + setsLogged.length + ' סטים, עד ' + best + ' ק"ג');
+  });
+  lines.push('');
+  lines.push('זמן אימון: ' + summary.totalMinutes + ' דקות');
+  lines.push('נפח כולל: ' + summary.totalVolume + ' ק"ג');
+  if(summary.prNames.length){
+    lines.push('שיא אישי חדש: ' + summary.prNames.join(', ') + ' 🎉');
+  }
+  lines.push('');
+  lines.push('💪 אימון הושלם');
+  return lines.join('\n');
+}
+
+function shareSession(){
+  var text = buildShareText();
+  if(navigator.share){
+    navigator.share({text:text}).catch(function(){});
+  }else if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      toast('הועתק ללוח - אפשר להדביק בוואטסאפ');
+    }).catch(function(){
+      toast('לא הצלחתי להעתיק');
+    });
+  }else{
+    toast('שיתוף לא נתמך בדפדפן הזה');
+  }
 }
 
 /* ---------------------------------------------------------------------
