@@ -5,8 +5,12 @@
 // `activate` safely wipe every old cache without touching localStorage -
 // the Cache Storage API and localStorage are entirely separate stores, so
 // nothing here can ever reach her workout log.
-var CACHE_VERSION = '1.1.0';
+var CACHE_VERSION = '1.2.0';
 var CACHE_NAME = 'coach-' + CACHE_VERSION;
+
+// Must match VOICE_PACK_DIR in index.html - no build step ties these
+// together, so keep them in sync by hand when the chosen voice changes.
+var VOICE_PACK_DIR = 'he-IL-Chirp3-HD-Callirrhoe';
 
 var APP_SHELL = [
   './',
@@ -15,13 +19,22 @@ var APP_SHELL = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-192-maskable.png',
-  './icons/icon-512-maskable.png'
+  './icons/icon-512-maskable.png',
+  './voice-manifest.json'
 ];
 
 self.addEventListener('install', function(event){
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache){
-      return cache.addAll(APP_SHELL);
+    fetch('./voice-manifest.json').then(function(resp){ return resp.json(); }).then(function(manifest){
+      // Every voice clip ships with the app shell so the coach works fully
+      // offline from the first open - matches how the rest of the app is
+      // cached, not fetched lazily on first use.
+      var audioUrls = Object.keys(manifest).map(function(key){
+        return './audio/' + VOICE_PACK_DIR + '/' + key.split('.').join('/') + '.mp3';
+      });
+      return caches.open(CACHE_NAME).then(function(cache){
+        return cache.addAll(APP_SHELL.concat(audioUrls));
+      });
     })
   );
   // Deliberately no self.skipWaiting() here: a new service worker should

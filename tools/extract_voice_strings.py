@@ -211,6 +211,10 @@ def build_manifest():
     m["frag.go"] = "קדימה."
     m["frag.done"] = "סיימנו!"
     m["frag.summary_lead"] = "דקות אימון, נפח כולל של"
+    m["frag.nice"] = "יפה."
+    m["frag.rest_tail"] = "שניות מנוחה."
+    m["frag.next_set"] = "סט הבא. קדימה."
+    m["frag.mins_trained"] = "דקות אימון."
 
     for i, letter in enumerate(day_letters, start=1):
         m[f"frag.day.{i}"] = f"גוף מלא {letter}"
