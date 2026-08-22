@@ -1,3 +1,13 @@
 .DS_Store
 Thumbs.db
 .claude/
+
+# voice pack pipeline (tools/CLAUDE_CODE_BRIEF.md)
+# everything under audio/ is disposable audition/build output EXCEPT the
+# chosen voice's final build, which ships with the app
+audio/*
+!audio/he-IL-Chirp3-HD-Callirrhoe/
+.hashes.json
+gcp-*.json
+*-key.json
+.venv/
