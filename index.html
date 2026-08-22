@@ -328,7 +328,7 @@
 var STORAGE_KEY = 'coach_v1';
 // Bump together with CACHE_VERSION in sw.js on every deploy that should
 // trigger the "app updated" notice and a fresh app-shell cache.
-var APP_VERSION = '1.1.0';
+var APP_VERSION = '1.2.0';
 var SEEN_VERSION_KEY = 'coach_v1_seen_version'; // separate from STORAGE_KEY - never touches her workout data
 
 function defaultState(){
@@ -342,7 +342,6 @@ function defaultState(){
       voiceEnabled:true,
       voiceRate:1,
       repCounting:false,
-      voiceUnavailableWarned:false,
       localLangNames:false
     },
     equipment:{},
@@ -1445,44 +1444,34 @@ function renderSettings(){
   });
   app.appendChild(voiceToggle);
 
-  if(!VOICE_STATE.checked || VOICE_STATE.available){
-    var rateLabel = document.createElement('div');
-    rateLabel.className = 'step-label';
-    rateLabel.textContent = 'מהירות דיבור';
-    app.appendChild(rateLabel);
-    var rateRow = document.createElement('div');
-    rateRow.className = 'rate-row';
-    [['איטי',0.85],['רגיל',1],['מהיר',1.15]].forEach(function(pair){
-      var b = document.createElement('button');
-      b.className = 'option-btn' + (Math.abs(state.profile.voiceRate-pair[1])<0.01 ? ' selected' : '');
-      b.innerHTML = '<span class="opt-title">'+pair[0]+'</span>';
-      b.addEventListener('click', function(){
-        state.profile.voiceRate = pair[1];
-        saveState();
-        render();
-      });
-      rateRow.appendChild(b);
-    });
-    app.appendChild(rateRow);
-
-    var repCountToggle = document.createElement('button');
-    repCountToggle.className = 'btn toggle-row' + (state.profile.repCounting ? ' toggle-on' : '');
-    repCountToggle.innerHTML = '<span>ספירת חזרות בקול</span><span class="toggle-state">'+(state.profile.repCounting?'מופעלת':'כבויה')+'</span>';
-    repCountToggle.addEventListener('click', function(){
-      state.profile.repCounting = !state.profile.repCounting;
+  var rateLabel = document.createElement('div');
+  rateLabel.className = 'step-label';
+  rateLabel.textContent = 'מהירות דיבור';
+  app.appendChild(rateLabel);
+  var rateRow = document.createElement('div');
+  rateRow.className = 'rate-row';
+  [['איטי',0.85],['רגיל',1],['מהיר',1.15]].forEach(function(pair){
+    var b = document.createElement('button');
+    b.className = 'option-btn' + (Math.abs(state.profile.voiceRate-pair[1])<0.01 ? ' selected' : '');
+    b.innerHTML = '<span class="opt-title">'+pair[0]+'</span>';
+    b.addEventListener('click', function(){
+      state.profile.voiceRate = pair[1];
       saveState();
       render();
     });
-    app.appendChild(repCountToggle);
-  }
+    rateRow.appendChild(b);
+  });
+  app.appendChild(rateRow);
 
-  if(VOICE_STATE.checked && !VOICE_STATE.available){
-    var voiceNote = document.createElement('p');
-    voiceNote.className = 'muted';
-    voiceNote.style.fontSize = '14px';
-    voiceNote.textContent = 'לא נמצא קול עברי מותקן במכשיר. הגדרות ← מערכת ← שפות וקלט ← פלט המרת טקסט לדיבור ← Google TTS ← התקנת נתוני קול ← עברית.';
-    app.appendChild(voiceNote);
-  }
+  var repCountToggle = document.createElement('button');
+  repCountToggle.className = 'btn toggle-row' + (state.profile.repCounting ? ' toggle-on' : '');
+  repCountToggle.innerHTML = '<span>ספירת חזרות בקול</span><span class="toggle-state">'+(state.profile.repCounting?'מופעלת':'כבויה')+'</span>';
+  repCountToggle.addEventListener('click', function(){
+    state.profile.repCounting = !state.profile.repCounting;
+    saveState();
+    render();
+  });
+  app.appendChild(repCountToggle);
 
   var exportBtn = document.createElement('button');
   exportBtn.className = 'btn';
@@ -1817,45 +1806,56 @@ document.addEventListener('visibilitychange', function(){
 });
 
 /* ---------------------------------------------------------------------
-   VOICE COACH (§6) - Chrome/Android Google TTS is the target. Never fall
-   back to an English voice mangling Hebrew text, and never trust a
-   network-only voice since it would go silent in airplane mode.
+   VOICE COACH (§6) - pre-rendered Google Cloud TTS clips (tools/,
+   voice-manifest.json). Chosen voice: he-IL-Chirp3-HD-Callirrhoe @
+   speaking_rate 0.92. Playback just needs <audio>, so unlike the old
+   Web Speech version this no longer depends on a device having a
+   Hebrew TTS voice installed - voiceEnabled is a pure preference now.
 --------------------------------------------------------------------- */
-var VOICE_STATE = {voice:null, available:false, checked:false};
+var VOICE_PACK_DIR = 'audio/he-IL-Chirp3-HD-Callirrhoe';
+var NUM_WHOLE_MAX = 150;   // must match tools/extract_voice_strings.py
+var NUM_HALF_MAX = 99;
 
-function pickHebrewVoice(){
-  if(!('speechSynthesis' in window)) return null;
-  var voices = window.speechSynthesis.getVoices();
-  var heLocal = voices.filter(function(v){
-    return v.lang && v.lang.toLowerCase().indexOf('he') === 0 && v.localService === true;
-  });
-  return heLocal[0] || null;
+function clipPath(key){
+  return VOICE_PACK_DIR + '/' + key.split('.').join('/') + '.mp3';
 }
 
-function finalizeVoiceDetection(){
-  if(VOICE_STATE.checked) return;
-  VOICE_STATE.checked = true;
-  VOICE_STATE.voice = pickHebrewVoice();
-  VOICE_STATE.available = !!VOICE_STATE.voice;
+// Nearest half-kg/rep, clamped to what was actually pre-rendered. Out of
+// range (e.g. total session volume) returns null so the caller drops it
+// instead of playing a gap.
+function numClipKey(n){
+  n = Math.round(n * 2) / 2;
+  if(n < 0) return null;
+  var whole = Math.floor(n);
+  if((n - whole) >= 0.5) return whole <= NUM_HALF_MAX ? ('num.' + whole + '_5') : null;
+  return whole <= NUM_WHOLE_MAX ? ('num.' + whole) : null;
 }
 
-function initVoice(){
-  if(!('speechSynthesis' in window)){
-    VOICE_STATE.checked = true;
-    return;
-  }
-  var voices = window.speechSynthesis.getVoices();
-  if(voices.length){
-    finalizeVoiceDetection();
-  }else{
-    window.speechSynthesis.addEventListener('voiceschanged', function onChange(){
-      window.speechSynthesis.removeEventListener('voiceschanged', onChange);
-      finalizeVoiceDetection();
-    });
-    // Some browsers cache voices without ever firing voiceschanged.
-    setTimeout(finalizeVoiceDetection, 1500);
-  }
+function dayFragKey(day){
+  var letter = day.nameHe.split(' ').pop();
+  var idx = DAY_LETTERS.indexOf(letter);
+  return idx === -1 ? null : ('frag.day.' + (idx + 1));
 }
+
+// Avoids repeating a line within the last `historyLen` picks for that pool.
+// Persisted, so "don't repeat within 2 sessions" holds across reopens too.
+function pickRandomClipKey(prefix, poolSize, historyLen){
+  state.ui = state.ui || {};
+  state.ui.voiceHistory = state.ui.voiceHistory || {};
+  var hist = state.ui.voiceHistory[prefix] || [];
+  var all = [];
+  for(var i=1; i<=poolSize; i++) all.push(i);
+  var avail = all.filter(function(i){ return hist.indexOf(i) === -1; });
+  if(!avail.length) avail = all;
+  var pick = avail[Math.floor(Math.random()*avail.length)];
+  hist.push(pick);
+  while(hist.length > historyLen) hist.shift();
+  state.ui.voiceHistory[prefix] = hist;
+  return prefix + '.' + (pick<10 ? '0'+pick : pick);
+}
+function randomGreetKey(){ return pickRandomClipKey('greet', 4, 2); }
+function randomEncKey(){ return pickRandomClipKey('enc', 21, 5); }
+function randomCloseKey(){ return pickRandomClipKey('close', 9, 2); }
 
 var repCountTimeouts = [];
 function clearRepCounting(){
@@ -1863,38 +1863,54 @@ function clearRepCounting(){
   repCountTimeouts = [];
 }
 
-function speak(text){
-  clearRepCounting();
-  if(!state.profile.voiceEnabled || !VOICE_STATE.available || !VOICE_STATE.voice) return;
-  try{
-    window.speechSynthesis.cancel(); // never let cues stack
-    var utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'he-IL';
-    utter.voice = VOICE_STATE.voice;
-    utter.rate = state.profile.voiceRate || 1;
-    window.speechSynthesis.speak(utter);
-  }catch(e){}
+var clipPlayToken = 0;
+var currentClipAudio = null;
+function stopClipPlayback(){
+  clipPlayToken++;
+  if(currentClipAudio){
+    try{ currentClipAudio.pause(); }catch(e){}
+    currentClipAudio = null;
+  }
 }
 
-var HEBREW_COUNT_WORDS = ['אחת','שתיים','שלוש','ארבע','חמש','שש','שבע','שמונה','תשע','עשר','אחת עשרה','שתים עשרה','שלוש עשרה','ארבע עשרה','חמש עשרה','שש עשרה','שבע עשרה','שמונה עשרה','תשע עשרה','עשרים'];
-function startRepCounting(targetReps){
-  if(!state.profile.repCounting || !state.profile.voiceEnabled || !VOICE_STATE.available) return;
+// Plays manifest keys back-to-back as one utterance. Nulls (an out-of-range
+// number) are skipped; a clip that fails to load (not cached yet, corrupt)
+// is skipped too rather than stalling the whole sequence.
+function playClipSequence(keys){
   clearRepCounting();
-  for(var i=0; i<targetReps && i<HEBREW_COUNT_WORDS.length; i++){
-    (function(word, delay){
+  stopClipPlayback();
+  if(!state.profile.voiceEnabled) return;
+  var token = clipPlayToken;
+  var queue = keys.filter(function(k){ return !!k; });
+  var i = 0;
+  function playNext(){
+    if(token !== clipPlayToken) return; // superseded by a newer call
+    if(i >= queue.length){ currentClipAudio = null; return; }
+    var audio = new Audio(clipPath(queue[i++]));
+    audio.playbackRate = state.profile.voiceRate || 1;
+    currentClipAudio = audio;
+    audio.addEventListener('ended', playNext);
+    audio.addEventListener('error', playNext);
+    audio.play().catch(function(){ playNext(); });
+  }
+  playNext();
+}
+
+function startRepCounting(targetReps){
+  if(!state.profile.repCounting || !state.profile.voiceEnabled) return;
+  clearRepCounting();
+  for(var i=0; i<targetReps && i<20; i++){
+    (function(n, delay){
       var id = setTimeout(function(){
-        if(!state.profile.voiceEnabled || !VOICE_STATE.available) return;
+        if(!state.profile.voiceEnabled || !state.profile.repCounting) return;
         try{
-          window.speechSynthesis.cancel();
-          var utter = new SpeechSynthesisUtterance(word);
-          utter.lang = 'he-IL';
-          utter.voice = VOICE_STATE.voice;
-          utter.rate = state.profile.voiceRate || 1;
-          window.speechSynthesis.speak(utter);
+          var audio = new Audio(clipPath('count.' + (n<10 ? '0'+n : n)));
+          audio.playbackRate = state.profile.voiceRate || 1;
+          audio.play().catch(function(){});
         }catch(e){}
       }, delay);
       repCountTimeouts.push(id);
-    })(HEBREW_COUNT_WORDS[i], (i+1)*1500);
+    })(i+1, (i+1)*1500);
   }
 }
 
@@ -1924,6 +1940,9 @@ function beep(freq, durMs){
   }catch(e){}
 }
 
+// Canonical text behind enc.*/close.* clips - tools/extract_voice_strings.py
+// parses these two arrays verbatim to build voice-manifest.json, so this is
+// the source of truth for the Hebrew, not just runtime documentation.
 var ENCOURAGEMENT_LINES = [
   'יפה מאוד, ממשיכות הלאה.',
   'את עושה את זה נהדר.',
@@ -1942,9 +1961,6 @@ var ENCOURAGEMENT_LINES = [
   'מתקדמות יפה, בואי נמשיך.',
   'עוד קצת וסיימנו את הבלוק הזה.'
 ];
-function randomEncouragement(){
-  return ENCOURAGEMENT_LINES[Math.floor(Math.random()*ENCOURAGEMENT_LINES.length)];
-}
 
 var SESSION_CLOSING_LINES = [
   'היה כיף להתאמן איתך היום.',
@@ -1954,35 +1970,34 @@ var SESSION_CLOSING_LINES = [
   'סיימת חזק. נתראה באימון הבא.'
 ];
 
-function buildSessionStartText(day){
-  return state.profile.name + ', היי! היום ' + day.nameHe + '. האימון אמור לקחת בערך ' + state.profile.sessionMinutes + ' דקות.';
+function buildSessionStartClips(day){
+  return [randomGreetKey(), 'frag.today_lead', dayFragKey(day),
+    'frag.session_len_lead', numClipKey(state.profile.sessionMinutes), 'frag.minutes_word'];
 }
 
-function buildNewExerciseText(item, ex, isFirstInSession){
-  var lines = [];
-  if(!isFirstInSession){
-    lines.push(randomEncouragement());
-  }
-  lines.push(ex.he + '.');
+function buildNewExerciseClips(item, ex, isFirstInSession){
+  var keys = [];
+  if(!isFirstInSession) keys.push(randomEncKey());
+  keys.push('ex.' + ex.id + '.name');
   if(item.kind === 'main'){
     var suggestion = suggestedWeightFor(item.exerciseId);
     if(suggestion === null){
-      lines.push('פעם ראשונה בתרגיל הזה - תתחילי במשקל הכי קל שיש.');
-    }else if(suggestion.suggestion === suggestion.lastWeight){
-      lines.push('פעם שעברה עשית ' + suggestion.lastWeight + ' קילו.');
+      keys.push('frag.first_time');
     }else{
-      lines.push('פעם שעברה עשית ' + suggestion.lastWeight + ' קילו. נסי ' + suggestion.suggestion + ' קילו הפעם.');
+      keys.push('frag.last_time_lead', numClipKey(suggestion.lastWeight), 'frag.kilo_word');
+      if(suggestion.suggestion !== suggestion.lastWeight){
+        keys.push('frag.try_lead', numClipKey(suggestion.suggestion), 'frag.kilo_word', 'frag.this_time_tail');
+      }
     }
-    lines.push(ex.cues.join('. ') + '.');
-    lines.push(item.sets + ' סטים, ' + item.repRange[0] + ' עד ' + item.repRange[1] + ' חזרות.');
+    keys.push('ex.' + ex.id + '.cues');
+    keys.push(numClipKey(item.sets), 'frag.sets_word', numClipKey(item.repRange[0]), 'frag.reps_lead', numClipKey(item.repRange[1]), 'frag.reps_word');
   }
-  lines.push('קדימה.');
-  return lines.join(' ');
+  keys.push('frag.go');
+  return keys;
 }
 
-function buildSessionEndText(summary){
-  var closing = SESSION_CLOSING_LINES[Math.floor(Math.random()*SESSION_CLOSING_LINES.length)];
-  return 'סיימנו! ' + summary.totalMinutes + ' דקות אימון, נפח כולל של ' + summary.totalVolume + ' קילו. ' + closing;
+function buildSessionEndClips(summary){
+  return ['frag.done', numClipKey(summary.totalMinutes), 'frag.mins_trained', randomCloseKey()];
 }
 
 /* ---------------------------------------------------------------------
@@ -2106,15 +2121,13 @@ function startSession(){
     toast('אין כרגע תרגילים זמינים - בדקי את הציוד בהגדרות');
     return;
   }
-  var needsVoiceNotice = state.profile.voiceEnabled && VOICE_STATE.checked &&
-    !VOICE_STATE.available && !state.profile.voiceUnavailableWarned;
   state.activeSession = {
     dayId: day.id,
     startedAt: new Date().toISOString(),
     exercises: flattened,
     currentIndex: 0,
     setLogs: {},
-    phase: needsVoiceNotice ? 'voice_notice' : 'exercise',
+    phase: 'exercise',
     pendingReps: 0,
     pendingWeight: 0,
     restEndAt: null,
@@ -2126,18 +2139,9 @@ function startSession(){
   saveState();
   requestWakeLock();
   go('session');
-  if(!needsVoiceNotice){
-    var first = state.activeSession.exercises[0];
-    speak(buildSessionStartText(day) + ' ' + buildNewExerciseText(first, EXERCISE_BY_ID[first.exerciseId], true));
-    if(first.kind === 'main') startRepCounting(first.repRange[1]);
-  }
-}
-
-function dismissVoiceNotice(){
-  state.profile.voiceUnavailableWarned = true;
-  state.activeSession.phase = 'exercise';
-  saveState();
-  render();
+  var first = state.activeSession.exercises[0];
+  playClipSequence(buildSessionStartClips(day).concat(buildNewExerciseClips(first, EXERCISE_BY_ID[first.exerciseId], true)));
+  if(first.kind === 'main') startRepCounting(first.repRange[1]);
 }
 
 function currentSessionItem(){
@@ -2152,13 +2156,13 @@ function advanceExercise(){
     s.phase = 'summary';
     saveState();
     render();
-    speak(buildSessionEndText(s.summary));
+    playClipSequence(buildSessionEndClips(s.summary));
   }else{
     s.phase = 'exercise';
     saveState();
     render();
     var item = s.exercises[s.currentIndex];
-    speak(buildNewExerciseText(item, EXERCISE_BY_ID[item.exerciseId], false));
+    playClipSequence(buildNewExerciseClips(item, EXERCISE_BY_ID[item.exerciseId], false));
     if(item.kind === 'main') startRepCounting(item.repRange[1]);
   }
 }
@@ -2193,10 +2197,10 @@ function startRest(sec, isPR){
   s.lastAnnouncedSecond = null;
   saveState();
   render();
-  var lines = [];
-  if(isPR) lines.push('שיא אישי! זה משקל שיא שברת בתרגיל הזה.');
-  lines.push('יפה. ' + sec + ' שניות מנוחה.');
-  speak(lines.join(' '));
+  var keys = [];
+  if(isPR) keys.push('frag.pr');
+  keys.push('frag.nice', numClipKey(sec), 'frag.rest_tail');
+  playClipSequence(keys);
 }
 
 function finishRest(){
@@ -2207,7 +2211,7 @@ function finishRest(){
     s.phase = 'exercise';
     saveState();
     render();
-    speak('סט הבא. קדימה.');
+    playClipSequence(['frag.next_set']);
     startRepCounting(item.repRange[1]);
   }else{
     advanceExercise();
@@ -2253,7 +2257,7 @@ function chooseSubstitute(cand, always){
   s.phase = 'exercise';
   saveState();
   render();
-  speak(buildNewExerciseText(item, cand, false));
+  playClipSequence(buildNewExerciseClips(item, cand, false));
   if(item.kind === 'main') startRepCounting(item.repRange[1]);
 }
 
@@ -2322,7 +2326,6 @@ function renderSession(){
   var s = state.activeSession;
   if(!s){ go('home'); return; }
   switch(s.phase){
-    case 'voice_notice': renderSessionVoiceNotice(); break;
     case 'exercise': renderSessionExercise(); break;
     case 'logging': renderSessionLogging(); break;
     case 'resting': renderSessionResting(); break;
@@ -2331,29 +2334,6 @@ function renderSession(){
     case 'summary': renderSessionSummary(); break;
     default: renderSessionExercise();
   }
-}
-
-function renderSessionVoiceNotice(){
-  var h = document.createElement('h1');
-  h.textContent = 'לא מצאנו קול עברי';
-  app.appendChild(h);
-
-  var box = document.createElement('div');
-  box.className = 'disclaimer-box';
-  box.innerHTML = '<b>האימון ימשיך בלי קריינות קולית</b>' +
-    'כדי להוסיף קול עברי למכשיר: הגדרות ← מערכת ← שפות וקלט ← פלט המרת טקסט לדיבור ← Google TTS ← התקנת נתוני קול ← עברית. ' +
-    'בינתיים נשתמש בהוראות גדולות על המסך ובצלילים בזמן המנוחה.';
-  app.appendChild(box);
-
-  var spacer = document.createElement('div');
-  spacer.className = 'spacer';
-  app.appendChild(spacer);
-
-  var btn = document.createElement('button');
-  btn.className = 'btn btn-primary';
-  btn.textContent = 'הבנתי, בואי נתחיל';
-  btn.addEventListener('click', dismissVoiceNotice);
-  app.appendChild(btn);
 }
 
 function sessionProgressLabel(){
@@ -2398,7 +2378,7 @@ function renderSessionExercise(){
   var item = currentSessionItem();
   var ex = EXERCISE_BY_ID[item.exerciseId];
 
-  if(s.currentIndex === 0 && state.profile.voiceEnabled && VOICE_STATE.available){
+  if(s.currentIndex === 0 && state.profile.voiceEnabled){
     var hp = document.createElement('div');
     hp.className = 'headphone-hint';
     hp.textContent = '🎧 באוזניות זה יהיה נעים יותר בחדר כושר ציבורי';
@@ -2615,9 +2595,8 @@ function renderSessionResting(){
 
     if(left <= 3 && left >= 1 && s2.lastAnnouncedSecond !== left){
       s2.lastAnnouncedSecond = left;
-      var COUNT_WORDS = {3:'שלוש', 2:'שתיים', 1:'אחת'};
-      if(state.profile.voiceEnabled && VOICE_STATE.available){
-        speak(COUNT_WORDS[left]);
+      if(state.profile.voiceEnabled){
+        playClipSequence(['cd.'+left]);
       }else{
         beep(left===1 ? 1200 : 880, 130);
       }
@@ -2887,7 +2866,6 @@ function forceUpdateCheck(){
 --------------------------------------------------------------------- */
 checkForUpdateNotice();
 registerServiceWorker();
-initVoice();
 render();
 </script>
 </body>
